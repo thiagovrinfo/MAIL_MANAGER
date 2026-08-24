@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Vrinfo.Mail.App/Vrinfo.Mail.App.csproj" />
+    <Project Path="src/Vrinfo.Mail.Cli/Vrinfo.Mail.Cli.csproj" />
+    <Project Path="src/Vrinfo.Mail.Core/Vrinfo.Mail.Core.csproj" />
+    <Project Path="src/Vrinfo.Mail.Imap/Vrinfo.Mail.Imap.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Vrinfo.Mail.Core.Tests/Vrinfo.Mail.Core.Tests.csproj" />
+  </Folder>
+</Solution>

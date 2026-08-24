@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Vrinfo.Mail.Cli</RootNamespace>
+    <AssemblyName>VRINFO.Mail.Cli</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vrinfo.Mail.Core\Vrinfo.Mail.Core.csproj" />
+    <ProjectReference Include="..\Vrinfo.Mail.Imap\Vrinfo.Mail.Imap.csproj" />
+  </ItemGroup>
+</Project>

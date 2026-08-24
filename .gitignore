@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.secret
+**/local-seed.*
+*.nupkg
+TestResults/
+publish/

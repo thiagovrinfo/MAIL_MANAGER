@@ -1,0 +1,142 @@
+<Window x:Class="Vrinfo.Mail.App.ComposeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Nova mensagem — VRINFO Mail"
+        Icon="pack://siteoforigin:,,,/Assets/app.ico"
+        Width="980" Height="760"
+        MinWidth="820" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Closing="OnWindowClosing">
+  <Grid>
+    <DockPanel x:Name="ComposeRoot">
+      <Border DockPanel.Dock="Bottom" Background="{StaticResource Panel}" Padding="12,10" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <TextBlock x:Name="DraftStatusText" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{StaticResource Muted}"/>
+            <Button Content="Excluir rascunho" Style="{StaticResource BtnGhost}" Click="OnDiscardDraft" MinWidth="120" Margin="0,0,8,0"/>
+            <Button x:Name="SendButton" Content="Enviar" Style="{StaticResource BtnPrimary}" Click="OnSend" MinWidth="108"/>
+          </StackPanel>
+          <ListBox x:Name="AttachmentList" Height="46" BorderThickness="0"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                   ScrollViewer.VerticalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Background="{StaticResource ChipBg}" CornerRadius="8" Padding="8,4" Margin="0,0,8,0">
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding}" MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                    <Button Content="×" Margin="8,0,0,0" Padding="4,0" Style="{StaticResource BtnGhost}" Click="OnRemoveAttachment"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" Padding="14,10" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="72"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="Para" VerticalAlignment="Center"/>
+          <TextBox x:Name="ToBox" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"/>
+          <TextBlock Text="Cc" Grid.Row="1" VerticalAlignment="Center"/>
+          <TextBox x:Name="CcBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"/>
+          <TextBlock Text="Cco" Grid.Row="2" VerticalAlignment="Center"/>
+          <TextBox x:Name="BccBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"/>
+          <TextBlock Text="Assunto" Grid.Row="3" VerticalAlignment="Center"/>
+          <TextBox x:Name="SubjectBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"/>
+          <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+            <CheckBox x:Name="HighPriorityBox" Content="Prioridade alta" Margin="0,0,16,0" VerticalAlignment="Center" Click="OnDraftDirty"/>
+            <CheckBox x:Name="ReadReceiptBox" Content="Confirmação de leitura" VerticalAlignment="Center" Click="OnDraftDirty"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <ToolBarTray DockPanel.Dock="Top" Background="{StaticResource Panel}">
+        <ToolBar Band="0" BandIndex="0" Background="{StaticResource Panel}" Foreground="{StaticResource Text}">
+          <ComboBox x:Name="FontBox" Width="150" SelectionChanged="OnFontChanged" IsEditable="False"/>
+          <ComboBox x:Name="SizeBox" Width="64" Margin="6,0,0,0" SelectionChanged="OnSizeChanged"/>
+          <Separator/>
+          <Button Content="N" FontWeight="Bold" Width="32" Click="OnBold" ToolTip="Negrito"/>
+          <Button Content="I" FontStyle="Italic" Width="32" Click="OnItalic" ToolTip="Itálico"/>
+          <Button Width="32" Click="OnUnderline" ToolTip="Sublinhado">
+            <Button.Content>
+              <TextBlock Text="S" TextDecorations="Underline"/>
+            </Button.Content>
+          </Button>
+          <Separator/>
+          <Button Content="A" Width="32" Click="OnColor" ToolTip="Cor do texto"/>
+          <Button Content="Marcador" Click="OnHighlight" ToolTip="Realce"/>
+          <Separator/>
+          <Button Content="Esq." Click="OnAlignLeft"/>
+          <Button Content="Centro" Click="OnAlignCenter"/>
+          <Button Content="Dir." Click="OnAlignRight"/>
+          <Separator/>
+          <Button Content="• Lista" Click="OnBullets"/>
+          <Button Content="1. Lista" Click="OnNumbers"/>
+          <Separator/>
+          <Button Content="Imagem" Click="OnInsertImage"/>
+          <Button Content="Anexar" Click="OnAttach"/>
+          <Button Content="Link" Click="OnInsertLink"/>
+          <Separator/>
+          <Button Content="Desfazer" Command="Undo"/>
+          <Button Content="Refazer" Command="Redo"/>
+          <Button Content="Limpar" Click="OnClearFormat"/>
+        </ToolBar>
+      </ToolBarTray>
+
+      <DockPanel>
+        <Border DockPanel.Dock="Bottom" Padding="12,8" Background="{StaticResource SignatureBg}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="Assinatura automática" FontWeight="SemiBold" Foreground="{StaticResource Text}" Margin="0,0,0,6"/>
+            <Image x:Name="SignaturePreview" MaxHeight="110" Stretch="Uniform" HorizontalAlignment="Left"/>
+          </DockPanel>
+        </Border>
+        <RichTextBox x:Name="Editor"
+                     Margin="10"
+                     Padding="10"
+                     BorderThickness="1"
+                     BorderBrush="{StaticResource Line}"
+                     Background="{StaticResource InputBg}"
+                     Foreground="{StaticResource Text}"
+                     CaretBrush="{StaticResource Blue}"
+                     AcceptsTab="True"
+                     VerticalScrollBarVisibility="Auto"
+                     SpellCheck.IsEnabled="True"
+                     TextChanged="OnDraftDirty">
+          <FlowDocument FontFamily="Calibri" FontSize="16" PagePadding="0"/>
+        </RichTextBox>
+      </DockPanel>
+    </DockPanel>
+
+    <Border x:Name="SendOverlay" Background="{StaticResource OverlayScrim}" Visibility="Collapsed">
+      <Border Width="460" Padding="24" CornerRadius="18" Background="{StaticResource CardBg}" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <Border.Effect>
+          <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.28"/>
+        </Border.Effect>
+        <StackPanel>
+          <TextBlock Text="Enviando mensagem" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Text}" Margin="0,0,0,8"/>
+          <TextBlock x:Name="SendStatusText" Text="Preparando…" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+          <ProgressBar x:Name="SendProgress" Height="10" Minimum="0" Maximum="100" Value="0"/>
+          <TextBlock x:Name="SendPercentText" Text="0%" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" Margin="0,6,0,0" FontSize="12"/>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+</Window>

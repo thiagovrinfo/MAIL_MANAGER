@@ -1,0 +1,47 @@
+using Vrinfo.Mail.Imap;
+
+namespace Vrinfo.Mail.App;
+
+public partial class App : System.Windows.Application
+{
+    private TrayController? _tray;
+    public static ShellViewModel Shell { get; } = new();
+
+    protected override async void OnStartup(System.Windows.StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        RamGuard.EnableProcessLimits();
+        DesktopShortcut.Ensure();
+        _tray = new TrayController(this, Shell);
+        Shell.ToastRequested += (title, body) => PushToastWindow.Enqueue(title, body);
+        var startMinimized = e.Args.Any(a => string.Equals(a, "--tray", StringComparison.OrdinalIgnoreCase));
+
+        var store = new MailSettingsStore();
+        Theme.Apply(store.Load().UseDarkTheme);
+        if (!store.HasConfiguredAccount())
+        {
+            var setup = new SetupWindow { DataContext = new SetupViewModel(store) };
+            if (setup.ShowDialog() != true)
+            {
+                Shutdown();
+                return;
+            }
+        }
+
+        var main = new MainWindow { DataContext = Shell };
+        MainWindow = main;
+        if (!startMinimized)
+            main.Show();
+        else
+            _tray.ShowBalloon(Vrinfo.Mail.Core.MailConstants.ProductName, "Rodando na bandeja.");
+
+        await Shell.StartAsync();
+    }
+
+    protected override void OnExit(System.Windows.ExitEventArgs e)
+    {
+        Shell.Dispose();
+        _tray?.Dispose();
+        base.OnExit(e);
+    }
+}
