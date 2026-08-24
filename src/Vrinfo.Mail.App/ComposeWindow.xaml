@@ -11,10 +11,10 @@
         Closing="OnWindowClosing">
   <Grid>
     <DockPanel x:Name="ComposeRoot">
-      <Border DockPanel.Dock="Bottom" Background="{StaticResource Panel}" Padding="12,10" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+      <Border DockPanel.Dock="Bottom" Background="{DynamicResource Panel}" Padding="12,10" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0">
         <DockPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-            <TextBlock x:Name="DraftStatusText" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{StaticResource Muted}"/>
+            <TextBlock x:Name="DraftStatusText" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{DynamicResource Muted}"/>
             <Button Content="Excluir rascunho" Style="{StaticResource BtnGhost}" Click="OnDiscardDraft" MinWidth="120" Margin="0,0,8,0"/>
             <Button x:Name="SendButton" Content="Enviar" Style="{StaticResource BtnPrimary}" Click="OnSend" MinWidth="108"/>
           </StackPanel>
@@ -28,7 +28,7 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Border Background="{StaticResource ChipBg}" CornerRadius="8" Padding="8,4" Margin="0,0,8,0">
+                <Border Background="{DynamicResource ChipBg}" CornerRadius="8" Padding="8,4" Margin="0,0,8,0">
                   <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding}" MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                     <Button Content="×" Margin="8,0,0,0" Padding="4,0" Style="{StaticResource BtnGhost}" Click="OnRemoveAttachment"/>
@@ -40,7 +40,7 @@
         </DockPanel>
       </Border>
 
-      <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" Padding="14,10" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+      <Border DockPanel.Dock="Top" Background="{DynamicResource Panel}" Padding="14,10" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -68,8 +68,8 @@
         </Grid>
       </Border>
 
-      <ToolBarTray DockPanel.Dock="Top" Background="{StaticResource Panel}">
-        <ToolBar Band="0" BandIndex="0" Background="{StaticResource Panel}" Foreground="{StaticResource Text}">
+      <ToolBarTray DockPanel.Dock="Top" Background="{DynamicResource Panel}">
+        <ToolBar Band="0" BandIndex="0" Background="{DynamicResource Panel}" Foreground="{DynamicResource Text}">
           <ComboBox x:Name="FontBox" Width="150" SelectionChanged="OnFontChanged" IsEditable="False"/>
           <ComboBox x:Name="SizeBox" Width="64" Margin="6,0,0,0" SelectionChanged="OnSizeChanged"/>
           <Separator/>
@@ -102,9 +102,9 @@
       </ToolBarTray>
 
       <DockPanel>
-        <Border DockPanel.Dock="Bottom" Padding="12,8" Background="{StaticResource SignatureBg}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+        <Border DockPanel.Dock="Bottom" Padding="12,8" Background="{DynamicResource SignatureBg}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0">
           <DockPanel>
-            <TextBlock DockPanel.Dock="Top" Text="Assinatura automática" FontWeight="SemiBold" Foreground="{StaticResource Text}" Margin="0,0,0,6"/>
+            <TextBlock DockPanel.Dock="Top" Text="Assinatura automática" FontWeight="SemiBold" Foreground="{DynamicResource Text}" Margin="0,0,0,6"/>
             <Image x:Name="SignaturePreview" MaxHeight="110" Stretch="Uniform" HorizontalAlignment="Left"/>
           </DockPanel>
         </Border>
@@ -112,10 +112,10 @@
                      Margin="10"
                      Padding="10"
                      BorderThickness="1"
-                     BorderBrush="{StaticResource Line}"
-                     Background="{StaticResource InputBg}"
-                     Foreground="{StaticResource Text}"
-                     CaretBrush="{StaticResource Blue}"
+                     BorderBrush="{DynamicResource Line}"
+                     Background="{DynamicResource InputBg}"
+                     Foreground="{DynamicResource Text}"
+                     CaretBrush="{DynamicResource Blue}"
                      AcceptsTab="True"
                      VerticalScrollBarVisibility="Auto"
                      SpellCheck.IsEnabled="True"
@@ -125,16 +125,16 @@
       </DockPanel>
     </DockPanel>
 
-    <Border x:Name="SendOverlay" Background="{StaticResource OverlayScrim}" Visibility="Collapsed">
-      <Border Width="460" Padding="24" CornerRadius="18" Background="{StaticResource CardBg}" VerticalAlignment="Center" HorizontalAlignment="Center">
+    <Border x:Name="SendOverlay" Background="{DynamicResource OverlayScrim}" Visibility="Collapsed">
+      <Border Width="460" Padding="24" CornerRadius="18" Background="{DynamicResource CardBg}" VerticalAlignment="Center" HorizontalAlignment="Center">
         <Border.Effect>
           <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.28"/>
         </Border.Effect>
         <StackPanel>
-          <TextBlock Text="Enviando mensagem" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Text}" Margin="0,0,0,8"/>
-          <TextBlock x:Name="SendStatusText" Text="Preparando…" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+          <TextBlock Text="Enviando mensagem" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Text}" Margin="0,0,0,8"/>
+          <TextBlock x:Name="SendStatusText" Text="Preparando…" Foreground="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
           <ProgressBar x:Name="SendProgress" Height="10" Minimum="0" Maximum="100" Value="0"/>
-          <TextBlock x:Name="SendPercentText" Text="0%" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" Margin="0,6,0,0" FontSize="12"/>
+          <TextBlock x:Name="SendPercentText" Text="0%" HorizontalAlignment="Right" Foreground="{DynamicResource Muted}" Margin="0,6,0,0" FontSize="12"/>
         </StackPanel>
       </Border>
     </Border>

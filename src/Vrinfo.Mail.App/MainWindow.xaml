@@ -13,15 +13,15 @@
         TextOptions.TextFormattingMode="Display">
   <Grid>
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{StaticResource Blue}" Padding="18,12">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Blue}" Padding="18,12">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal">
-          <TextBlock Text="VRINFO Mail" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeaderFg}" VerticalAlignment="Center"/>
-          <TextBlock Text="  ·  leitor IMAP" Foreground="{StaticResource HeaderSub}" VerticalAlignment="Center"/>
+          <TextBlock Text="VRINFO Mail" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource HeaderFg}" VerticalAlignment="Center"/>
+          <TextBlock Text="  ·  leitor IMAP" Foreground="{DynamicResource HeaderSub}" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal">
           <Button Style="{StaticResource BtnPrimary}" Command="{Binding ComposeCommand}" Margin="0,0,8,0" MinWidth="118" Padding="14,8">
@@ -67,12 +67,12 @@
           </Button>
           <Button Content="Atualizar" Style="{StaticResource BtnOnHeader}" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
           <Button Content="{Binding ThemeToggleLabel}" Style="{StaticResource BtnOnHeader}" Command="{Binding ToggleThemeCommand}" Margin="0,0,8,0"/>
-          <CheckBox Content="Iniciar com o Windows" Foreground="{StaticResource HeaderFg}" VerticalAlignment="Center"
+          <CheckBox Content="Iniciar com o Windows" Foreground="{DynamicResource HeaderFg}" VerticalAlignment="Center"
                     IsChecked="{Binding StartWithWindows}"/>
         </StackPanel>
       </Grid>
     </Border>
-    <StatusBar DockPanel.Dock="Bottom" Background="{StaticResource StatusBg}" Foreground="{StaticResource Text}">
+    <StatusBar DockPanel.Dock="Bottom" Background="{DynamicResource StatusBg}" Foreground="{DynamicResource Text}">
       <StatusBarItem>
         <TextBlock Text="{Binding Status}"/>
       </StatusBarItem>
@@ -88,7 +88,7 @@
         <ColumnDefinition Width="5"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
-      <DockPanel Background="{StaticResource Panel}">
+      <DockPanel Background="{DynamicResource Panel}">
         <TextBlock DockPanel.Dock="Top" Text="Pastas" FontWeight="SemiBold" Margin="12,12,12,4"/>
         <ListBox ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}" BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -107,10 +107,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                       <Trigger Property="IsSelected" Value="True">
-                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource ListSelected}"/>
+                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListSelected}"/>
                       </Trigger>
                       <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource ListHover}"/>
+                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListHover}"/>
                       </Trigger>
                     </ControlTemplate.Triggers>
                   </ControlTemplate>
@@ -121,7 +121,7 @@
           <ListBox.ItemTemplate>
             <DataTemplate>
               <StackPanel Orientation="Horizontal" Margin="2">
-                <Border Width="52" Height="52" CornerRadius="14" Background="{StaticResource IconPlate}" Margin="0,0,12,0">
+                <Border Width="52" Height="52" CornerRadius="14" Background="{DynamicResource IconPlate}" Margin="0,0,12,0">
                   <Border.Effect>
                     <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.55" Color="White"/>
                   </Border.Effect>
@@ -130,15 +130,15 @@
                          RenderOptions.BitmapScalingMode="LowQuality" RenderOptions.CachingHint="Cache"/>
                 </Border>
                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"
-                           Foreground="{StaticResource Text}"/>
-                <TextBlock Text="{Binding Unread, StringFormat=' ({0})'}" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource Text}"/>
+                <TextBlock Text="{Binding Unread, StringFormat=' ({0})'}" Foreground="{DynamicResource Muted}" VerticalAlignment="Center"/>
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
       </DockPanel>
-      <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource Line}"/>
-      <DockPanel Grid.Column="2" Background="{StaticResource Panel}">
+      <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource Line}"/>
+      <DockPanel Grid.Column="2" Background="{DynamicResource Panel}">
         <StackPanel DockPanel.Dock="Top" Margin="8">
           <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
           <WrapPanel>
@@ -166,7 +166,7 @@
             <Style TargetType="ListBoxItem">
               <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
               <Setter Property="Padding" Value="0"/>
-              <Setter Property="Foreground" Value="{StaticResource Text}"/>
+              <Setter Property="Foreground" Value="{DynamicResource Text}"/>
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
@@ -175,10 +175,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                       <Trigger Property="IsSelected" Value="True">
-                        <Setter TargetName="MsgBd" Property="Background" Value="{StaticResource ListSelected}"/>
+                        <Setter TargetName="MsgBd" Property="Background" Value="{DynamicResource ListSelected}"/>
                       </Trigger>
                       <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="MsgBd" Property="Background" Value="{StaticResource ListHover}"/>
+                        <Setter TargetName="MsgBd" Property="Background" Value="{DynamicResource ListHover}"/>
                       </Trigger>
                     </ControlTemplate.Triggers>
                   </ControlTemplate>
@@ -191,23 +191,23 @@
               <Border Padding="8,6">
                 <StackPanel>
                   <DockPanel>
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding WhenLabel}" Foreground="{StaticResource Muted}" FontSize="11"/>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding WhenLabel}" Foreground="{DynamicResource Muted}" FontSize="11"/>
                     <TextBlock Text="{Binding DisplayFrom}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                   </DockPanel>
                   <TextBlock Text="{Binding Subject}" TextTrimming="CharacterEllipsis"/>
-                  <TextBlock Text="{Binding Preview}" Foreground="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                  <TextBlock Text="{Binding Preview}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
               </Border>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
       </DockPanel>
-      <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource Line}"/>
-      <DockPanel Grid.Column="4" Background="{StaticResource ReaderBg}">
-        <Border DockPanel.Dock="Top" Padding="12" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+      <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource Line}"/>
+      <DockPanel Grid.Column="4" Background="{DynamicResource ReaderBg}">
+        <Border DockPanel.Dock="Top" Padding="12" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1">
           <StackPanel>
             <TextBlock Text="{Binding SubjectLine}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding FromLine}" Foreground="{StaticResource Muted}" Margin="0,4,0,8"/>
+            <TextBlock Text="{Binding FromLine}" Foreground="{DynamicResource Muted}" Margin="0,4,0,8"/>
             <StackPanel Orientation="Horizontal">
               <Button Content="Responder" Style="{StaticResource BtnPrimary}" Command="{Binding ReplyCommand}" Margin="0,0,6,0"/>
               <Button Content="Encaminhar" Style="{StaticResource BtnGhost}" Command="{Binding ForwardCommand}" Margin="0,0,6,0"/>
@@ -220,10 +220,10 @@
       </DockPanel>
     </Grid>
     </DockPanel>
-    <Border Background="{StaticResource OverlayScrim}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" IsHitTestVisible="True">
-      <Border Width="320" Padding="20" CornerRadius="16" Background="{StaticResource CardBg}" VerticalAlignment="Center" HorizontalAlignment="Center">
+    <Border Background="{DynamicResource OverlayScrim}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" IsHitTestVisible="True">
+      <Border Width="320" Padding="20" CornerRadius="16" Background="{DynamicResource CardBg}" VerticalAlignment="Center" HorizontalAlignment="Center">
         <StackPanel>
-          <TextBlock Text="Sincronizando caixa…" FontWeight="SemiBold" Foreground="{StaticResource Text}" Margin="0,0,0,10"/>
+          <TextBlock Text="Sincronizando caixa…" FontWeight="SemiBold" Foreground="{DynamicResource Text}" Margin="0,0,0,10"/>
           <ProgressBar IsIndeterminate="True" Height="8"/>
         </StackPanel>
       </Border>

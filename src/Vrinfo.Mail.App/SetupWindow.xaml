@@ -8,12 +8,12 @@
         ResizeMode="NoResize">
   <StackPanel Margin="24">
     <TextBlock Text="Configure a caixa IMAP" FontSize="18" FontWeight="SemiBold"/>
-    <TextBlock Text="{Binding Hint}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,16"/>
+    <TextBlock Text="{Binding Hint}" Foreground="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,8,0,16"/>
     <TextBlock Text="E-mail"/>
     <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,12"/>
     <TextBlock Text="Senha"/>
     <PasswordBox x:Name="PasswordBox" Margin="0,4,0,12"/>
-    <TextBlock Text="{Binding Error}" Foreground="{StaticResource Danger}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+    <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" TextWrapping="Wrap" Margin="0,0,0,12"/>
     <Button Content="Entrar" Style="{StaticResource BtnPrimary}" HorizontalAlignment="Right" Click="OnSave"/>
   </StackPanel>
 </Window>

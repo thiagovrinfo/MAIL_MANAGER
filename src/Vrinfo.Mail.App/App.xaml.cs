@@ -5,11 +5,19 @@ namespace Vrinfo.Mail.App;
 public partial class App : System.Windows.Application
 {
     private TrayController? _tray;
-    public static ShellViewModel Shell { get; } = new();
+    public static ShellViewModel Shell { get; private set; } = null!;
 
     protected override async void OnStartup(System.Windows.StartupEventArgs e)
     {
+        SingleInstance.ReplaceRunning();
         base.OnStartup(e);
+        DispatcherUnhandledException += (_, args) =>
+        {
+            args.Handled = true;
+            System.Windows.MessageBox.Show(args.Exception.Message, "VRINFO Mail");
+        };
+
+        Shell = new ShellViewModel();
         RamGuard.EnableProcessLimits();
         DesktopShortcut.Ensure();
         _tray = new TrayController(this, Shell);
@@ -40,7 +48,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(System.Windows.ExitEventArgs e)
     {
-        Shell.Dispose();
+        Shell?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);
     }

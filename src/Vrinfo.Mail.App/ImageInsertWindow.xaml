@@ -21,7 +21,7 @@
         <TextBlock DockPanel.Dock="Right" Text="{Binding ElementName=QualitySlider, Path=Value, StringFormat='{}{0:0}'}" Width="40"/>
         <Slider x:Name="QualitySlider" Minimum="50" Maximum="95" Value="82" TickFrequency="1" IsSnapToTickEnabled="True"/>
       </DockPanel>
-      <TextBlock Text="A imagem é redimensionada e compactada para o e-mail." Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+      <TextBlock Text="A imagem é redimensionada e compactada para o e-mail." Foreground="{DynamicResource Muted}" TextWrapping="Wrap"/>
     </StackPanel>
   </DockPanel>
 </Window>

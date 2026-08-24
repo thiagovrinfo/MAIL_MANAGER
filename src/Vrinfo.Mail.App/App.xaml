@@ -30,11 +30,11 @@
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     <Style TargetType="TextBox">
       <Setter Property="Padding" Value="8,6"/>
-      <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Background" Value="{StaticResource InputBg}"/>
-      <Setter Property="Foreground" Value="{StaticResource Text}"/>
-      <Setter Property="CaretBrush" Value="{StaticResource Blue}"/>
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource Blue}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="TextBox">
@@ -48,11 +48,11 @@
     </Style>
     <Style TargetType="PasswordBox">
       <Setter Property="Padding" Value="8,6"/>
-      <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Background" Value="{StaticResource InputBg}"/>
-      <Setter Property="Foreground" Value="{StaticResource Text}"/>
-      <Setter Property="CaretBrush" Value="{StaticResource Blue}"/>
+      <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource Blue}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="PasswordBox">
@@ -66,27 +66,27 @@
     </Style>
     <Style TargetType="ProgressBar">
       <Setter Property="Height" Value="10"/>
-      <Setter Property="Foreground" Value="{StaticResource Blue}"/>
-      <Setter Property="Background" Value="{StaticResource ProgressTrack}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Blue}"/>
+      <Setter Property="Background" Value="{DynamicResource ProgressTrack}"/>
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style TargetType="Window">
       <Setter Property="FontFamily" Value="Segoe UI"/>
       <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Background" Value="{StaticResource Bg}"/>
-      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="Background" Value="{DynamicResource Bg}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
     </Style>
     <Style TargetType="ListBox">
-      <Setter Property="Background" Value="{StaticResource Panel}"/>
-      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="Background" Value="{DynamicResource Panel}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style TargetType="CheckBox">
-      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Text}"/>
     </Style>
     <Style x:Key="BtnPrimary" TargetType="Button">
-      <Setter Property="Background" Value="{StaticResource Blue}"/>
-      <Setter Property="Foreground" Value="{StaticResource HeaderFg}"/>
+      <Setter Property="Background" Value="{DynamicResource Blue}"/>
+      <Setter Property="Foreground" Value="{DynamicResource HeaderFg}"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Padding" Value="12,6"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
@@ -131,12 +131,12 @@
       </Style.Triggers>
     </Style>
     <Style x:Key="BtnGhost" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
-      <Setter Property="Background" Value="{StaticResource GhostBg}"/>
-      <Setter Property="Foreground" Value="{StaticResource GhostFg}"/>
+      <Setter Property="Background" Value="{DynamicResource GhostBg}"/>
+      <Setter Property="Foreground" Value="{DynamicResource GhostFg}"/>
     </Style>
     <Style x:Key="BtnOnHeader" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
-      <Setter Property="Background" Value="{StaticResource HeaderGhostBg}"/>
-      <Setter Property="Foreground" Value="{StaticResource HeaderGhostFg}"/>
+      <Setter Property="Background" Value="{DynamicResource HeaderGhostBg}"/>
+      <Setter Property="Foreground" Value="{DynamicResource HeaderGhostFg}"/>
     </Style>
   </Application.Resources>
 </Application>

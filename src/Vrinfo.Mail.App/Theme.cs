@@ -89,7 +89,7 @@ internal static class Theme
 
     private static void SetBrush(ResourceDictionary r, string key, System.Windows.Media.Color color)
     {
-        if (r[key] is SolidColorBrush existing)
+        if (r[key] is SolidColorBrush existing && !existing.IsFrozen)
         {
             existing.Color = color;
             return;
