@@ -24,7 +24,7 @@ public partial class ComposeWindow : System.Windows.Window
         "Times New Roman", "Courier New", "Trebuchet MS", "Segoe UI"
     ];
 
-    private static readonly double[] MailSizes = [10, 11, 12, 14, 16, 18, 20, 24, 28, 36];
+    private static readonly double[] MailSizes = [10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 60, 72, 96, 120, 150];
 
     private readonly MailSettings _settings;
     private readonly string _password;
@@ -64,7 +64,9 @@ public partial class ComposeWindow : System.Windows.Window
         _onDraftsChanged = onDraftsChanged;
         _loadAsDraft = loadAsDraft;
         _draftUid = existingDraftUid;
-        CcBox.Text = MailConstants.AlwaysCc;
+        CcBox.Text = string.Join("; ", settings.AlwaysCc.Where(EmailAddressHelper.IsValid));
+        HighPriorityBox.IsChecked = settings.AlwaysSendHighPriority;
+        ReadReceiptBox.IsChecked = settings.AlwaysConfirmSend;
         AttachmentList.ItemsSource = _attachments;
         ApplyEditorTheme();
         Theme.Changed += ApplyEditorTheme;
@@ -95,6 +97,10 @@ public partial class ComposeWindow : System.Windows.Window
             PrefillDraft(original);
         else if (original is not null)
             Prefill(original, forward);
+        if (_settings.AlwaysSendHighPriority)
+            HighPriorityBox.IsChecked = true;
+        if (_settings.AlwaysConfirmSend)
+            ReadReceiptBox.IsChecked = true;
         _suspendDirty = false;
 
         DraftStatusText.Text = loadAsDraft ? "Rascunho aberto" : "Rascunho será salvo automaticamente";

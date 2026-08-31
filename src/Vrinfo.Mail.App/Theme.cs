@@ -30,6 +30,7 @@ internal static class Theme
             Set(r, "HeaderSub", 197, 212, 232);
             Set(r, "ListSelected", 42, 63, 88);
             Set(r, "ListHover", 34, 48, 64);
+            Set(r, "UnreadRow", 36, 64, 96);
             Set(r, "StatusBg", 18, 26, 36);
             Set(r, "ReaderBg", 18, 24, 32);
             Set(r, "InputBg", 28, 38, 51);
@@ -57,6 +58,7 @@ internal static class Theme
             Set(r, "HeaderSub", 187, 222, 251);
             Set(r, "ListSelected", 187, 222, 251);
             Set(r, "ListHover", 227, 242, 253);
+            Set(r, "UnreadRow", 187, 222, 251);
             Set(r, "StatusBg", 232, 238, 245);
             Set(r, "ReaderBg", 255, 255, 255);
             Set(r, "InputBg", 255, 255, 255);

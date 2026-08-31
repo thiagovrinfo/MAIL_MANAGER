@@ -21,7 +21,11 @@ public partial class App : System.Windows.Application
         RamGuard.EnableProcessLimits();
         DesktopShortcut.Ensure();
         _tray = new TrayController(this, Shell);
-        Shell.ToastRequested += (title, body) => PushToastWindow.Enqueue(title, body);
+        Shell.ToastRequested += (title, body) =>
+        {
+            if (Shell.EnableTray)
+                PushToastWindow.Enqueue(title, body);
+        };
         var startMinimized = e.Args.Any(a => string.Equals(a, "--tray", StringComparison.OrdinalIgnoreCase));
 
         var store = new MailSettingsStore();
@@ -44,6 +48,12 @@ public partial class App : System.Windows.Application
             _tray.ShowBalloon(Vrinfo.Mail.Core.MailConstants.ProductName, "Rodando na bandeja.");
 
         await Shell.StartAsync();
+        ApplyTray(Shell.EnableTray);
+    }
+
+    public void ApplyTray(bool enabled)
+    {
+        _tray?.SetVisible(enabled);
     }
 
     protected override void OnExit(System.Windows.ExitEventArgs e)

@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
-using System.Windows.Media.Imaging;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
+using Vrinfo.Mail.Core;
 
 namespace Vrinfo.Mail.App;
 
@@ -26,7 +28,7 @@ public partial class MainWindow : System.Windows.Window
         {
             vm.HtmlChanged += html =>
             {
-                _ = Dispatcher.InvokeAsync(() => ShowHtml(html), System.Windows.Threading.DispatcherPriority.Background);
+                _ = Dispatcher.InvokeAsync(() => ShowHtml(html), System.Windows.Threading.DispatcherPriority.Send);
             };
             Theme.Changed += () =>
             {
@@ -49,7 +51,7 @@ public partial class MainWindow : System.Windows.Window
         await Reader.EnsureCoreWebView2Async(env);
         Reader.DefaultBackgroundColor = Theme.ReaderBackColor();
         if (DataContext is ShellViewModel ready)
-            ShowHtml(ready.HtmlBody);
+            ShowHtml(_pendingHtml ?? ready.HtmlBody);
         Reader.CoreWebView2.Settings.IsScriptEnabled = false;
         Reader.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
         Reader.CoreWebView2.Settings.AreDevToolsEnabled = false;
@@ -60,14 +62,35 @@ public partial class MainWindow : System.Windows.Window
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         e.Cancel = true;
-        if (Reader.CoreWebView2 is not null)
-            Reader.NavigateToString("<html></html>");
-        Hide();
-        RamGuard.Trim();
+        if (DataContext is ShellViewModel { EnableTray: true, MinimizeToTray: true })
+        {
+            if (Reader.CoreWebView2 is not null)
+                Reader.NavigateToString("<html></html>");
+            Hide();
+            RamGuard.Trim();
+            return;
+        }
+
+        if (System.Windows.Application.Current is App app)
+            app.Shutdown();
+    }
+
+    private string? _pendingHtml;
+
+    private void OnMessageItemMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+            return;
+        if (sender is ListBoxItem { DataContext: IndexedMessage message } &&
+            DataContext is ShellViewModel vm)
+        {
+            vm.OpenFromList(message);
+        }
     }
 
     private void ShowHtml(string? html)
     {
+        _pendingHtml = html;
         if (Reader.CoreWebView2 is null)
             return;
         Reader.DefaultBackgroundColor = Theme.ReaderBackColor();

@@ -26,12 +26,19 @@ public sealed class TrayController : IDisposable
         _icon.DoubleClick += (_, _) => ShowMain();
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Abrir", null, (_, _) => ShowMain());
+        menu.Items.Add("Configurações", null, (_, _) => _shell.OpenSettingsCommand.Execute(null));
         menu.Items.Add("Sair", null, (_, _) =>
         {
             _icon.Visible = false;
             _app.Shutdown();
         });
         _icon.ContextMenuStrip = menu;
+        SetVisible(shell.EnableTray);
+    }
+
+    public void SetVisible(bool visible)
+    {
+        _icon.Visible = visible;
     }
 
     public void ShowBalloon(string title, string text)

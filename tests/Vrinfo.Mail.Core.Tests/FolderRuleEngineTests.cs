@@ -93,6 +93,31 @@ public sealed class FolderRuleEngineTests
     }
 
     [Fact]
+    public void Extra_rule_token_moves_to_folder()
+    {
+        var kind = FolderRuleEngine.ResolveFolder(new RuleMatchInput
+        {
+            From = "avisos@parceiro.com",
+            Subject = "Pedido especial XPTO",
+            HiperTokens = ["xpto"],
+            FolderHiperEnabled = true
+        });
+        Assert.Equal(SmartFolderKind.Hiper, kind);
+    }
+
+    [Fact]
+    public void Disabled_folder_skips_rule()
+    {
+        var kind = FolderRuleEngine.ResolveFolder(new RuleMatchInput
+        {
+            From = "noreply@discord.com",
+            Subject = "Você perdeu uma mensagem",
+            FolderDiscordEnabled = false
+        });
+        Assert.Equal(SmartFolderKind.None, kind);
+    }
+
+    [Fact]
     public void Completes_vrinfo_domain()
     {
         Assert.Equal("thiago@vrinfo.com.br", EmailAddressHelper.CompleteVrinfoAddress("thiago"));

@@ -71,7 +71,7 @@
       <ToolBarTray DockPanel.Dock="Top" Background="{DynamicResource Panel}">
         <ToolBar Band="0" BandIndex="0" Background="{DynamicResource Panel}" Foreground="{DynamicResource Text}">
           <ComboBox x:Name="FontBox" Width="150" SelectionChanged="OnFontChanged" IsEditable="False"/>
-          <ComboBox x:Name="SizeBox" Width="64" Margin="6,0,0,0" SelectionChanged="OnSizeChanged"/>
+          <ComboBox x:Name="SizeBox" Width="72" Margin="6,0,0,0" SelectionChanged="OnSizeChanged"/>
           <Separator/>
           <Button Content="N" FontWeight="Bold" Width="32" Click="OnBold" ToolTip="Negrito"/>
           <Button Content="I" FontStyle="Italic" Width="32" Click="OnItalic" ToolTip="Itálico"/>

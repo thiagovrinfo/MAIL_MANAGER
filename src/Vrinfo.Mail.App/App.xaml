@@ -13,6 +13,7 @@
     <SolidColorBrush x:Key="HeaderSub" Color="#BBDEFB"/>
     <SolidColorBrush x:Key="ListSelected" Color="#BBDEFB"/>
     <SolidColorBrush x:Key="ListHover" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="UnreadRow" Color="#BBDEFB"/>
     <SolidColorBrush x:Key="StatusBg" Color="#E8EEF5"/>
     <SolidColorBrush x:Key="ReaderBg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="InputBg" Color="#FFFFFF"/>

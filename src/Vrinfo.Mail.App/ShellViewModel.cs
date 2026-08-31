@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -35,9 +37,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _password = string.Empty;
     private readonly CancellationTokenSource _cts = new();
     private MimeMessage? _openMime;
+    private MessageQuickView? _openView;
     private uint? _openDraftComposeUid;
-    private readonly HashSet<string> _inboxKeys = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _inboxKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, MessageQuickView> _newBodyCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentQueue<string> _cacheOrder = new();
+    private long _cacheBytes;
+    private const long BodyCacheLimitBytes = 50L * 1024 * 1024;
+    private readonly SemaphoreSlim _folderSyncGate = new(1, 1);
     private bool _suppressToasts;
+    private bool _suppressMessageOpen;
     private int _openGeneration;
     private CancellationTokenSource? _searchCts;
 
@@ -58,10 +67,20 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string fromLine = "";
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool isOpeningCompose;
+    [ObservableProperty] private bool isOpeningMessage;
+    [ObservableProperty] private double openingProgress;
+    [ObservableProperty] private bool foldersExpanded = true;
     [ObservableProperty] private bool startWithWindows = true;
+    [ObservableProperty] private bool enableTray = true;
+    [ObservableProperty] private bool minimizeToTray = true;
     [ObservableProperty] private bool isDarkTheme;
 
     public string ThemeToggleLabel => IsDarkTheme ? "Modo claro" : "Modo escuro";
+    public string ThemeIcon => IsDarkTheme ? "☀" : "☽";
+    public string ComposeButtonLabel => IsOpeningCompose ? "Abrindo…" : "Enviar E-mail";
+    public GridLength FolderColumnWidth => FoldersExpanded ? new GridLength(176) : new GridLength(52);
+    public string FolderToggleGlyph => FoldersExpanded ? "‹" : "›";
+    public string FolderToggleHint => FoldersExpanded ? "Reduzir pastas" : "Expandir pastas";
 
     public event Action<string, string>? ToastRequested;
     public event Action<string>? HtmlChanged;
@@ -69,7 +88,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public async Task StartAsync()
     {
         _settings = _store.Load();
+        FoldersExpanded = _settings.FoldersExpanded;
         StartWithWindows = _settings.StartWithWindows;
+        EnableTray = _settings.EnableTray;
+        MinimizeToTray = _settings.MinimizeToTray;
         IsDarkTheme = _settings.UseDarkTheme;
         Theme.Apply(IsDarkTheme);
         _password = WindowsCredentialStore.Read(_settings.Email) ?? "";
@@ -87,9 +109,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             IsBusy = true;
             Status = "Conectando IMAP…";
-            _settings.StartWithWindows = true;
-            StartWithWindows = true;
-            _store.Save(_settings);
             await _mailbox.ConnectAsync(_settings, _password, _cts.Token);
             Status = "Sincronizando Entrada…";
             try
@@ -126,11 +145,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         Folders.Clear();
         Folders.Add(new FolderNavItem { Id = "INBOX", Title = "Entrada", Logo = LoadLogo("inbox.png") });
-        Folders.Add(new FolderNavItem { Id = MailConstants.FolderInovafarma, Title = "Inovafarma", Logo = LoadLogo("inovafarma.png") });
-        Folders.Add(new FolderNavItem { Id = MailConstants.FolderHiper, Title = "Hiper", Logo = LoadLogo("hiper.png") });
-        Folders.Add(new FolderNavItem { Id = MailConstants.FolderContas, Title = "Contas", Logo = LoadLogo("contas.png") });
-        Folders.Add(new FolderNavItem { Id = MailConstants.FolderContabilidade, Title = "Contabilidade", Logo = LoadLogo("contabilidade.png") });
-        Folders.Add(new FolderNavItem { Id = MailConstants.FolderDiscord, Title = "Discord", Logo = LoadLogo("discord.png") });
+        if (_settings.FolderInovafarmaEnabled)
+            Folders.Add(new FolderNavItem { Id = MailConstants.FolderInovafarma, Title = "Inovafarma", Logo = LoadLogo("inovafarma.png") });
+        if (_settings.FolderHiperEnabled)
+            Folders.Add(new FolderNavItem { Id = MailConstants.FolderHiper, Title = "Hiper", Logo = LoadLogo("hiper.png") });
+        if (_settings.FolderContasEnabled)
+            Folders.Add(new FolderNavItem { Id = MailConstants.FolderContas, Title = "Contas", Logo = LoadLogo("contas.png") });
+        if (_settings.FolderContabilidadeEnabled)
+            Folders.Add(new FolderNavItem { Id = MailConstants.FolderContabilidade, Title = "Contabilidade", Logo = LoadLogo("contabilidade.png") });
+        if (_settings.FolderDiscordEnabled)
+            Folders.Add(new FolderNavItem { Id = MailConstants.FolderDiscord, Title = "Discord", Logo = LoadLogo("discord.png") });
         Folders.Add(new FolderNavItem { Id = MailConstants.FolderDrafts, Title = "Rascunhos", Logo = LoadLogo("drafts.png") });
         Folders.Add(new FolderNavItem { Id = "Sent", Title = "Enviados", Logo = LoadLogo("sent.png") });
         Folders.Add(new FolderNavItem { Id = "Trash", Title = "Lixeira", Logo = LoadLogo("trash.png") });
@@ -153,14 +177,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     private async Task FinishStartupAsync()
     {
+        await _folderSyncGate.WaitAsync(_cts.Token);
         try
         {
             _suppressToasts = true;
             Status = "Aplicando filtro inteligente…";
             await _mailbox.ApplyMailboxSmartRulesAsync(null, _cts.Token);
             Status = "Atualizando pastas…";
-            await _mailbox.MarkMailboxReadAsync(_cts.Token);
-            await SyncKnownFoldersAsync();
+            await SyncKnownFoldersCoreAsync();
             CaptureInboxKeys();
             _suppressToasts = false;
             Status = "Caixa sincronizada · IDLE ativo";
@@ -169,6 +193,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             _suppressToasts = false;
             Status = "Sincronização em segundo plano: " + ex.Message;
+        }
+        finally
+        {
+            _folderSyncGate.Release();
         }
     }
 
@@ -180,16 +208,28 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public void ReloadList()
     {
-        Messages.Clear();
-        foreach (var item in _index.Query(
-                     SelectedFolder?.Id,
-                     Search,
-                     UnreadOnly,
-                     AttachmentsOnly,
-                     TodayOnly,
-                     HighPriorityOnly,
-                     FiscalOnly))
-            Messages.Add(item);
+        var keepFolder = SelectedMessage?.Folder;
+        var keepUid = SelectedMessage?.Uid;
+        _suppressMessageOpen = true;
+        try
+        {
+            Messages.Clear();
+            foreach (var item in _index.Query(
+                         SelectedFolder?.Id,
+                         Search,
+                         UnreadOnly,
+                         AttachmentsOnly,
+                         TodayOnly,
+                         HighPriorityOnly,
+                         FiscalOnly))
+                Messages.Add(item);
+            if (keepFolder is not null && keepUid is uint uid)
+                SelectedMessage = Messages.FirstOrDefault(m => m.Folder == keepFolder && m.Uid == uid);
+        }
+        finally
+        {
+            _suppressMessageOpen = false;
+        }
     }
 
     partial void OnSelectedFolderChanged(FolderNavItem? value) => ReloadList();
@@ -218,9 +258,35 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     partial void OnHighPriorityOnlyChanged(bool value) => ReloadList();
     partial void OnFiscalOnlyChanged(bool value) => ReloadList();
 
-    partial void OnSelectedMessageChanged(IndexedMessage? value) => _ = OpenMessageAsync(value);
+    partial void OnSelectedMessageChanged(IndexedMessage? value)
+    {
+        if (_suppressMessageOpen)
+            return;
+        _ = OpenMessageAsync(value);
+    }
+
+    public void OpenFromList(IndexedMessage message)
+    {
+        if (!ReferenceEquals(SelectedMessage, message))
+            SelectedMessage = message;
+        else
+            _ = OpenMessageAsync(message);
+    }
 
     private async Task SyncKnownFoldersAsync()
+    {
+        await _folderSyncGate.WaitAsync(_cts.Token);
+        try
+        {
+            await SyncKnownFoldersCoreAsync();
+        }
+        finally
+        {
+            _folderSyncGate.Release();
+        }
+    }
+
+    private async Task SyncKnownFoldersCoreAsync()
     {
         foreach (var folder in new[]
                  {
@@ -249,24 +315,63 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             }
         }
 
-        RefreshUnread();
-        ReloadList();
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null)
+            return;
+        await dispatcher.InvokeAsync(() =>
+        {
+            RefreshUnread();
+            ReloadList();
+        });
     }
+
+    private static readonly string[] RuleDestinationFolders =
+    [
+        MailConstants.FolderInovafarma,
+        MailConstants.FolderHiper,
+        MailConstants.FolderContas,
+        MailConstants.FolderContabilidade,
+        MailConstants.FolderDiscord
+    ];
 
     private async Task RefreshFromIdleAsync()
     {
+        await _folderSyncGate.WaitAsync(_cts.Token);
         try
         {
-            await _mailbox.ApplyInboxRulesAsync(_suppressToasts ? null : OnMoved, _cts.Token);
+            var moved = new List<IndexedMessage>();
+            await _mailbox.ApplyInboxRulesAsync(message =>
+            {
+                moved.Add(message);
+                OnMoved(message);
+            }, _cts.Token);
             var inbox = await _mailbox.SyncFolderAsync("INBOX", _cts.Token);
             _index.ReplaceFolder("INBOX", inbox);
+            foreach (var folder in RuleDestinationFolders)
+            {
+                try
+                {
+                    var items = await _mailbox.SyncFolderAsync(folder, _cts.Token);
+                    _index.ReplaceFolder(folder, items);
+                }
+                catch
+                {
+                    // pasta pode não existir neste servidor
+                }
+            }
+
             var newcomers = inbox.Where(m => !_inboxKeys.Contains(m.UniqueId)).ToList();
             CaptureInboxKeys(inbox);
+            PrefetchNewBodies(newcomers.Concat(moved));
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 RefreshUnread();
                 ReloadList();
+                if (newcomers.Count == 0)
+                    return;
                 Status = "Novas mensagens · " + DateTime.Now.ToString("HH:mm");
+                if (_suppressToasts)
+                    return;
                 foreach (var item in newcomers.Take(3))
                     ToastRequested?.Invoke(item.DisplayFrom, item.Subject);
             });
@@ -274,6 +379,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         catch
         {
             // o loop IDLE tenta de novo
+        }
+        finally
+        {
+            _folderSyncGate.Release();
         }
     }
 
@@ -294,6 +403,71 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         });
     }
 
+    private static string BodyCacheKey(string folder, uint uid) => folder + "\0" + uid.ToString();
+
+    private IndexedMessage ResolveCachedTarget(IndexedMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(message.MessageId))
+            return message;
+        var match = _index.Query(message.Folder, null, false, false, false, false, false)
+            .FirstOrDefault(m => string.Equals(m.MessageId, message.MessageId, StringComparison.OrdinalIgnoreCase));
+        return match ?? message;
+    }
+
+    private void PrefetchNewBodies(IEnumerable<IndexedMessage> items)
+    {
+        foreach (var raw in items.Take(12))
+        {
+            var message = ResolveCachedTarget(raw);
+            if (IsDraftsFolder(message.Folder))
+                continue;
+            _ = PrefetchOneAsync(message);
+        }
+    }
+
+    private async Task PrefetchOneAsync(IndexedMessage message)
+    {
+        var key = BodyCacheKey(message.Folder, message.Uid);
+        if (_newBodyCache.ContainsKey(key) || Volatile.Read(ref _cacheBytes) >= BodyCacheLimitBytes)
+            return;
+        try
+        {
+            for (var i = 0; i < 40 && IsOpeningMessage; i++)
+                await Task.Delay(50, _cts.Token);
+            if (IsOpeningMessage)
+                return;
+            var view = await _mailbox.GetQuickViewAsync(message.Folder, message.Uid, null, _cts.Token, useBackgroundSession: true);
+            TryAddCache(key, view);
+        }
+        catch
+        {
+            // abre sob demanda
+        }
+    }
+
+    private void TryAddCache(string key, MessageQuickView view)
+    {
+        var size = view.ByteSize;
+        if (size <= 0 || size > BodyCacheLimitBytes)
+            return;
+        while (Volatile.Read(ref _cacheBytes) + size > BodyCacheLimitBytes && _cacheOrder.TryDequeue(out var oldKey))
+        {
+            if (_newBodyCache.TryRemove(oldKey, out var old) && oldKey != key)
+                Interlocked.Add(ref _cacheBytes, -old.ByteSize);
+        }
+
+        if (!_newBodyCache.TryAdd(key, view))
+            return;
+        Interlocked.Add(ref _cacheBytes, size);
+        _cacheOrder.Enqueue(key);
+    }
+
+    private void RemoveFromCache(string key)
+    {
+        if (_newBodyCache.TryRemove(key, out var view))
+            Interlocked.Add(ref _cacheBytes, -view.ByteSize);
+    }
+
     private async Task OpenMessageAsync(IndexedMessage? message)
     {
         if (message is null)
@@ -301,17 +475,68 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         var generation = Interlocked.Increment(ref _openGeneration);
         try
         {
-            _openMime = await _mailbox.GetMessageAsync(message.Folder, message.Uid, _cts.Token);
-            if (generation != _openGeneration)
-                return;
-            SubjectLine = _openMime.Subject ?? message.Subject;
-            FromLine = _openMime.From.ToString();
-            HtmlBody = string.IsNullOrWhiteSpace(_openMime.HtmlBody)
-                ? "<pre style='font-family:Segoe UI;white-space:pre-wrap'>" + System.Net.WebUtility.HtmlEncode(_openMime.TextBody ?? "") + "</pre>"
-                : _openMime.HtmlBody;
-            HtmlChanged?.Invoke(HtmlBody);
+            SubjectLine = message.Subject;
+            FromLine = message.DisplayFrom;
+            IsOpeningMessage = true;
+            OpeningProgress = 10;
+
+            MessageQuickView view;
+            var cacheKey = BodyCacheKey(message.Folder, message.Uid);
             if (IsDraftsFolder(message.Folder))
             {
+                OpeningProgress = 40;
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+                timeout.CancelAfter(TimeSpan.FromSeconds(18));
+                var mime = await _mailbox.GetMessageAsync(message.Folder, message.Uid, timeout.Token);
+                if (generation != _openGeneration)
+                    return;
+                view = new MessageQuickView
+                {
+                    Folder = message.Folder,
+                    Uid = message.Uid,
+                    Subject = mime.Subject ?? message.Subject,
+                    From = mime.From.ToString(),
+                    Html = string.IsNullOrWhiteSpace(mime.HtmlBody)
+                        ? "<pre style='font-family:Segoe UI;white-space:pre-wrap'>" + System.Net.WebUtility.HtmlEncode(mime.TextBody ?? "") + "</pre>"
+                        : mime.HtmlBody,
+                    Text = mime.TextBody ?? "",
+                    Mime = mime
+                };
+            }
+            else if (_newBodyCache.TryGetValue(cacheKey, out var cached))
+            {
+                OpeningProgress = 70;
+                view = cached;
+            }
+            else
+            {
+                var progress = new Progress<int>(value =>
+                {
+                    if (generation == _openGeneration)
+                        OpeningProgress = value;
+                });
+                view = await _mailbox.GetQuickViewAsync(message.Folder, message.Uid, progress, _cts.Token);
+            }
+
+            if (generation != _openGeneration)
+                return;
+
+            _openMime = view.Mime;
+            _openView = view;
+            OpeningProgress = 82;
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                SubjectLine = view.Subject;
+                FromLine = view.From;
+                HtmlBody = view.Html;
+                HtmlChanged?.Invoke(HtmlBody);
+            });
+            RemoveFromCache(cacheKey);
+            IsOpeningMessage = false;
+
+            if (IsDraftsFolder(message.Folder))
+            {
+                IsOpeningMessage = false;
                 if (_openDraftComposeUid != message.Uid)
                 {
                     _openDraftComposeUid = message.Uid;
@@ -319,18 +544,84 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 }
                 return;
             }
+
             if (!message.IsSeen)
             {
                 await _mailbox.SetSeenAsync(message.Folder, message.Uid, true, _cts.Token);
                 message.IsSeen = true;
                 _index.Upsert(message);
                 RefreshUnread();
+                if (UnreadOnly)
+                    ReloadList();
             }
+
+            OpeningProgress = 90;
+            await LoadInlineImagesAsync(view, generation);
+            OpeningProgress = 100;
+        }
+        catch (OperationCanceledException)
+        {
+            if (generation == _openGeneration)
+                Status = "Abertura interrompida.";
         }
         catch (Exception ex)
         {
-            Status = "Não foi possível abrir: " + ex.Message;
+            if (generation == _openGeneration)
+                Status = "Não foi possível abrir: " + ex.Message;
         }
+        finally
+        {
+            if (generation == _openGeneration)
+                IsOpeningMessage = false;
+        }
+    }
+
+    private async Task LoadInlineImagesAsync(MessageQuickView view, int generation)
+    {
+        var html = view.Html;
+        var changed = false;
+        foreach (var part in view.Parts.Where(p => p.IsImage && p.IsInline && p.ContentId.Length > 0))
+        {
+            if (generation != _openGeneration)
+                return;
+            if (part.Octets > 2_500_000)
+                continue;
+            try
+            {
+                var bytes = await _mailbox.GetPartBytesAsync(view.Folder, view.Uid, part.Specifier, _cts.Token);
+                if (bytes is null || bytes.Length == 0)
+                    continue;
+                var data = "data:" + part.ContentType + ";base64," + Convert.ToBase64String(bytes);
+                var next = ReplaceCid(html, part.ContentId, data);
+                if (next == html)
+                    continue;
+                html = next;
+                changed = true;
+            }
+            catch
+            {
+                // imagem segue lazy; o texto já está visível
+            }
+        }
+
+        if (!changed || generation != _openGeneration)
+            return;
+        view.Html = html;
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            HtmlBody = html;
+            HtmlChanged?.Invoke(HtmlBody);
+        });
+    }
+
+    private static string ReplaceCid(string html, string contentId, string dataUri)
+    {
+        var id = contentId.Trim();
+        if (id.Length == 0)
+            return html;
+        html = html.Replace("cid:" + id, dataUri, StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("CID:" + id, dataUri, StringComparison.OrdinalIgnoreCase);
+        return html;
     }
 
     [RelayCommand]
@@ -434,7 +725,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         ReloadList();
     }
 
-    partial void OnIsOpeningComposeChanged(bool value) => ComposeCommand.NotifyCanExecuteChanged();
+    partial void OnIsOpeningComposeChanged(bool value)
+    {
+        ComposeCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(ComposeButtonLabel));
+    }
 
     private bool CanCompose() => !IsOpeningCompose;
 
@@ -530,17 +825,107 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task SaveAttachment()
     {
-        if (_openMime is null) return;
+        if (_openView is null && _openMime is null)
+            return;
         using var dialog = new System.Windows.Forms.FolderBrowserDialog { Description = "Salvar anexos em" };
         if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
             return;
-        foreach (var att in _openMime.Attachments.OfType<MimePart>())
+
+        var saved = 0;
+        if (_openView is not null)
         {
-            var name = att.FileName ?? "anexo.bin";
-            await using var stream = File.Create(Path.Combine(dialog.SelectedPath, name));
-            att.Content.DecodeTo(stream);
+            foreach (var part in _openView.Parts.Where(p => !string.IsNullOrWhiteSpace(p.Specifier) && (!p.IsInline || !p.IsImage)))
+            {
+                var bytes = await _mailbox.GetPartBytesAsync(_openView.Folder, _openView.Uid, part.Specifier, _cts.Token);
+                if (bytes is null || bytes.Length == 0)
+                    continue;
+                var name = string.IsNullOrWhiteSpace(part.FileName) ? "anexo.bin" : part.FileName;
+                await File.WriteAllBytesAsync(Path.Combine(dialog.SelectedPath, name), bytes);
+                saved++;
+            }
         }
-        Status = "Anexos salvos.";
+
+        if (saved == 0 && _openMime is not null)
+        {
+            foreach (var att in _openMime.Attachments.OfType<MimePart>())
+            {
+                var name = att.FileName ?? "anexo.bin";
+                await using var stream = File.Create(Path.Combine(dialog.SelectedPath, name));
+                att.Content.DecodeTo(stream);
+                saved++;
+            }
+        }
+
+        Status = saved == 0 ? "Esta mensagem não tem anexo para salvar." : "Anexos salvos.";
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        var owner = System.Windows.Application.Current?.MainWindow;
+        var window = new SettingsWindow
+        {
+            Owner = owner,
+            DataContext = new SettingsViewModel(_store, _settings, _settings.Email)
+        };
+        window.ShowDialog();
+    }
+
+    public async Task ApplySettingsAsync(MailSettings settings, string? newPassword)
+    {
+        _settings = settings;
+        StartWithWindows = settings.StartWithWindows;
+        EnableTray = settings.EnableTray;
+        MinimizeToTray = settings.MinimizeToTray;
+        if (!string.IsNullOrWhiteSpace(newPassword))
+            _password = newPassword;
+        else if (EmailAddressHelper.IsValid(settings.Email))
+            _password = WindowsCredentialStore.Read(settings.Email) ?? _password;
+
+        ApplyAutostart();
+        (System.Windows.Application.Current as App)?.ApplyTray(settings.EnableTray);
+        var selectedId = SelectedFolder?.Id;
+        BuildFolders();
+        SelectedFolder = Folders.FirstOrDefault(f => f.Id == selectedId) ?? Folders.FirstOrDefault();
+        ReloadList();
+
+        if (string.IsNullOrWhiteSpace(_password) || !EmailAddressHelper.IsValid(settings.Email))
+        {
+            Status = "Conta salva. Informe a senha para sincronizar.";
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            Status = "Reconectando…";
+            await _mailbox.ConnectAsync(_settings, _password, _cts.Token);
+            _idle.Start(_settings, _password);
+            Status = "Configurações aplicadas.";
+        }
+        catch (Exception ex)
+        {
+            Status = "Configurações salvas, falha ao reconectar: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleFolders()
+    {
+        FoldersExpanded = !FoldersExpanded;
+    }
+
+    partial void OnFoldersExpandedChanged(bool value)
+    {
+        _settings.FoldersExpanded = value;
+        _store.Save(_settings);
+        OnPropertyChanged(nameof(FolderColumnWidth));
+        OnPropertyChanged(nameof(FolderToggleGlyph));
+        OnPropertyChanged(nameof(FolderToggleHint));
     }
 
     [RelayCommand]
@@ -555,6 +940,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _store.Save(_settings);
         Theme.Apply(value);
         OnPropertyChanged(nameof(ThemeToggleLabel));
+        OnPropertyChanged(nameof(ThemeIcon));
         HtmlChanged?.Invoke(HtmlBody);
     }
 
@@ -584,6 +970,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _idle.Dispose();
         _mailbox.Dispose();
         _index.Dispose();
+        _folderSyncGate.Dispose();
         _cts.Dispose();
     }
 }

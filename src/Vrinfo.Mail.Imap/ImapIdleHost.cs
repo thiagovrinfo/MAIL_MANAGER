@@ -49,6 +49,7 @@ public sealed class ImapIdleHost : IDisposable
                 await client.Inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
                 client.Inbox.CountChanged += OnInboxChanged;
                 client.Inbox.MessageExpunged += OnInboxChanged;
+                client.Inbox.MessageFlagsChanged += OnInboxChanged;
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -86,7 +87,7 @@ public sealed class ImapIdleHost : IDisposable
     private void OnInboxChanged(object? sender, EventArgs e)
     {
         var now = DateTime.UtcNow;
-        if ((now - _lastRaiseUtc).TotalMilliseconds < 2500)
+        if ((now - _lastRaiseUtc).TotalMilliseconds < 800)
             return;
         _lastRaiseUtc = now;
         InboxChanged?.Invoke(this, EventArgs.Empty);

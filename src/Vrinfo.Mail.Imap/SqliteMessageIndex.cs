@@ -5,6 +5,7 @@ namespace Vrinfo.Mail.Imap;
 
 public sealed class SqliteMessageIndex : IDisposable
 {
+    private readonly object _sync = new();
     private readonly SqliteConnection _connection;
 
     public SqliteMessageIndex()
@@ -66,7 +67,15 @@ public sealed class SqliteMessageIndex : IDisposable
 
     public void Upsert(IndexedMessage message)
     {
+        lock (_sync)
+            UpsertCore(message, null);
+    }
+
+    private void UpsertCore(IndexedMessage message, SqliteTransaction? transaction)
+    {
         using var cmd = _connection.CreateCommand();
+        if (transaction is not null)
+            cmd.Transaction = transaction;
         cmd.CommandText = """
             INSERT INTO messages (
               unique_id, folder, uid, message_id, from_address, from_name, to_addresses,
@@ -107,27 +116,33 @@ public sealed class SqliteMessageIndex : IDisposable
 
     public void ReplaceFolder(string folder, IEnumerable<IndexedMessage> messages)
     {
-        using var tx = _connection.BeginTransaction();
-        using (var del = _connection.CreateCommand())
+        lock (_sync)
         {
-            del.Transaction = tx;
-            del.CommandText = "DELETE FROM messages WHERE folder=$f";
-            del.Parameters.AddWithValue("$f", folder);
-            del.ExecuteNonQuery();
+            using var tx = _connection.BeginTransaction();
+            using (var del = _connection.CreateCommand())
+            {
+                del.Transaction = tx;
+                del.CommandText = "DELETE FROM messages WHERE folder=$f";
+                del.Parameters.AddWithValue("$f", folder);
+                del.ExecuteNonQuery();
+            }
+
+            foreach (var message in messages)
+                UpsertCore(message, tx);
+
+            tx.Commit();
         }
-
-        foreach (var message in messages)
-            Upsert(message);
-
-        tx.Commit();
     }
 
     public void DeleteByUniqueId(string uniqueId)
     {
+        lock (_sync)
+        {
         using var cmd = _connection.CreateCommand();
         cmd.CommandText = "DELETE FROM messages WHERE unique_id=$id";
         cmd.Parameters.AddWithValue("$id", uniqueId);
         cmd.ExecuteNonQuery();
+        }
     }
 
     public IReadOnlyList<IndexedMessage> Query(
@@ -139,6 +154,8 @@ public sealed class SqliteMessageIndex : IDisposable
         bool highPriorityOnly,
         bool fiscalOnly)
     {
+        lock (_sync)
+        {
         using var cmd = _connection.CreateCommand();
         var sql = "SELECT * FROM messages WHERE 1=1";
         if (!string.IsNullOrWhiteSpace(folder))
@@ -170,14 +187,18 @@ public sealed class SqliteMessageIndex : IDisposable
         sql += " ORDER BY date_utc DESC LIMIT 500";
         cmd.CommandText = sql;
         return ReadAll(cmd);
+        }
     }
 
     public int UnreadCount(string folder)
     {
+        lock (_sync)
+        {
         using var cmd = _connection.CreateCommand();
         cmd.CommandText = "SELECT COUNT(*) FROM messages WHERE folder=$f AND is_seen=0";
         cmd.Parameters.AddWithValue("$f", folder);
         return Convert.ToInt32(cmd.ExecuteScalar());
+        }
     }
 
     private static List<IndexedMessage> ReadAll(SqliteCommand cmd)

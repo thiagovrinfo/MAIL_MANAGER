@@ -6,19 +6,19 @@ public static class FolderRuleEngine
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        if (IsDiscord(input))
+        if (input.FolderDiscordEnabled && IsDiscord(input))
             return SmartFolderKind.Discord;
 
-        if (IsInovafarma(input))
+        if (input.FolderInovafarmaEnabled && IsInovafarma(input))
             return SmartFolderKind.Inovafarma;
 
-        if (IsHiper(input))
+        if (input.FolderHiperEnabled && IsHiper(input))
             return SmartFolderKind.Hiper;
 
-        if (IsContas(input))
+        if (input.FolderContasEnabled && IsContas(input))
             return SmartFolderKind.Contas;
 
-        if (IsContabilidade(input))
+        if (input.FolderContabilidadeEnabled && IsContabilidade(input))
             return SmartFolderKind.Contabilidade;
 
         return SmartFolderKind.None;
@@ -55,7 +55,8 @@ public static class FolderRuleEngine
         var haystack = Haystack(input);
         return haystack.Contains("discord.com", StringComparison.Ordinal) ||
                haystack.Contains("discordapp.com", StringComparison.Ordinal) ||
-               haystack.Contains("@discord.", StringComparison.Ordinal);
+               haystack.Contains("@discord.", StringComparison.Ordinal) ||
+               ContainsAny(haystack, input.DiscordTokens);
     }
 
     public static bool IsInovafarma(RuleMatchInput input)
@@ -65,7 +66,8 @@ public static class FolderRuleEngine
                (haystack.Contains("zendesk.com", StringComparison.Ordinal) &&
                 haystack.Contains("representante", StringComparison.Ordinal)) ||
                haystack.Contains("atendimento ao representante", StringComparison.Ordinal) ||
-               IsAls(input);
+               IsAls(input) ||
+               ContainsAny(haystack, input.InovafarmaTokens);
     }
 
     public static bool IsHiper(RuleMatchInput input)
@@ -77,7 +79,8 @@ public static class FolderRuleEngine
                haystack.Contains("sistema hiper", StringComparison.Ordinal) ||
                haystack.Contains("sistemas hiper", StringComparison.Ordinal) ||
                haystack.Contains("hiper pdv", StringComparison.Ordinal) ||
-               haystack.Contains("linx hiper", StringComparison.Ordinal);
+               haystack.Contains("linx hiper", StringComparison.Ordinal) ||
+               ContainsAny(haystack, input.HiperTokens);
     }
 
     public static bool IsAls(RuleMatchInput input)
@@ -93,7 +96,8 @@ public static class FolderRuleEngine
         return haystack.Contains("accounts.google.com", StringComparison.Ordinal) ||
                haystack.Contains("no-reply@accounts.google.com", StringComparison.Ordinal) ||
                haystack.Contains("accountprotection.microsoft.com", StringComparison.Ordinal) ||
-               haystack.Contains("account-security-noreply@accountprotection.microsoft.com", StringComparison.Ordinal);
+               haystack.Contains("account-security-noreply@accountprotection.microsoft.com", StringComparison.Ordinal) ||
+               ContainsAny(haystack, input.ContasTokens);
     }
 
     public static bool IsContabilidade(RuleMatchInput input)
@@ -120,6 +124,20 @@ public static class FolderRuleEngine
         {
             var token = sender.Trim().ToLowerInvariant();
             if (token.Length == 0)
+                continue;
+            if (haystack.Contains(token, StringComparison.Ordinal))
+                return true;
+        }
+
+        return ContainsAny(haystack, input.ContabilidadeTokens);
+    }
+
+    private static bool ContainsAny(string haystack, IEnumerable<string>? tokens)
+    {
+        foreach (var raw in tokens ?? [])
+        {
+            var token = raw.Trim().ToLowerInvariant();
+            if (token.Length < 3)
                 continue;
             if (haystack.Contains(token, StringComparison.Ordinal))
                 return true;

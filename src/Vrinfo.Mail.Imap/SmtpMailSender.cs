@@ -41,8 +41,11 @@ public static class SmtpMailSender
                 ccSet.Add(address.Trim());
         }
 
-        if (EmailAddressHelper.IsValid(MailConstants.AlwaysCc))
-            ccSet.Add(MailConstants.AlwaysCc);
+        foreach (var address in settings.AlwaysCc ?? [])
+        {
+            if (EmailAddressHelper.IsValid(address))
+                ccSet.Add(address.Trim());
+        }
 
         ccSet.Remove(settings.Email);
         foreach (var address in ccSet)

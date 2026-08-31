@@ -12,7 +12,9 @@ namespace Vrinfo.Mail.Imap;
 public sealed class ImapMailbox : IDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly SemaphoreSlim _readGate = new(1, 1);
     private ImapClient? _client;
+    private ImapClient? _readClient;
     private MailSettings _settings = new();
     private string _password = string.Empty;
 
@@ -22,6 +24,27 @@ public sealed class ImapMailbox : IDisposable
         _password = password;
         await EnsureConnectedAsync(cancellationToken);
         await EnsureSmartFoldersAsync(cancellationToken);
+        _ = WarmReadSessionAsync(cancellationToken);
+    }
+
+    public async Task WarmReadSessionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _readGate.WaitAsync(cancellationToken);
+            try
+            {
+                await EnsureReadConnectedAsync(cancellationToken);
+            }
+            finally
+            {
+                _readGate.Release();
+            }
+        }
+        catch
+        {
+            // a primeira abertura reconecta
+        }
     }
 
     public async Task EnsureSmartFoldersAsync(CancellationToken cancellationToken)
@@ -57,10 +80,10 @@ public sealed class ImapMailbox : IDisposable
             {
                 var summaries = await folder.FetchAsync(
                     batch.ToList(),
-                    MessageSummaryItems.Envelope | MessageSummaryItems.Flags | MessageSummaryItems.UniqueId,
+                    MessageSummaryItems.Envelope | MessageSummaryItems.Flags | MessageSummaryItems.UniqueId | MessageSummaryItems.InternalDate,
                     cancellationToken);
                 foreach (var summary in summaries)
-                    list.Add(ToIndexed(folder.FullName, summary, _settings));
+                    list.Add(ToIndexed(folderName, summary, _settings));
             }
 
             return list;
@@ -73,6 +96,8 @@ public sealed class ImapMailbox : IDisposable
 
     public async Task ApplyInboxRulesAsync(Action<IndexedMessage>? onMoved, CancellationToken cancellationToken)
     {
+        if (!_settings.ApplyRulesOnSync)
+            return;
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -87,6 +112,8 @@ public sealed class ImapMailbox : IDisposable
 
     public async Task ApplyMailboxSmartRulesAsync(Action<IndexedMessage>? onMoved, CancellationToken cancellationToken)
     {
+        if (!_settings.ApplyRulesOnSync)
+            return;
         await ApplyInboxRulesAsync(onMoved, cancellationToken);
 
         await _gate.WaitAsync(cancellationToken);
@@ -386,17 +413,168 @@ public sealed class ImapMailbox : IDisposable
 
     public async Task<MimeMessage> GetMessageAsync(string folderName, uint uid, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
+        await _readGate.WaitAsync(cancellationToken);
         try
         {
-            var client = await EnsureConnectedAsync(cancellationToken);
+            var client = await EnsureReadConnectedAsync(cancellationToken);
             var folder = await OpenAsync(client, folderName, FolderAccess.ReadOnly, cancellationToken);
             return await folder.GetMessageAsync(new UniqueId(uid), cancellationToken);
         }
         finally
         {
-            _gate.Release();
+            _readGate.Release();
         }
+    }
+
+    public async Task<MessageQuickView> GetQuickViewAsync(
+        string folderName,
+        uint uid,
+        IProgress<int>? progress,
+        CancellationToken cancellationToken,
+        bool useBackgroundSession = false)
+    {
+        var gate = useBackgroundSession ? _gate : _readGate;
+        await gate.WaitAsync(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(25));
+        var ct = timeout.Token;
+        try
+        {
+            progress?.Report(12);
+            var client = useBackgroundSession
+                ? await EnsureConnectedAsync(ct)
+                : await EnsureReadConnectedAsync(ct);
+            var folder = await OpenAsync(client, folderName, FolderAccess.ReadOnly, ct);
+            var summaries = await folder.FetchAsync(
+                new[] { new UniqueId(uid) },
+                MessageSummaryItems.BodyStructure | MessageSummaryItems.Envelope | MessageSummaryItems.UniqueId,
+                ct);
+            var summary = summaries.FirstOrDefault()
+                          ?? throw new InvalidOperationException("Mensagem não encontrada no servidor.");
+            progress?.Report(28);
+
+            string? html = null;
+            string? text = null;
+            var parts = new List<RemotePart>();
+            var textParts = new List<BodyPartText>();
+            WalkParts(summary.Body, part =>
+            {
+                var hint = ToRemotePart(part);
+                if (hint is not null)
+                    parts.Add(hint);
+                if (part is BodyPartText textPart && textPart.Octets <= 5_000_000 && !textPart.IsAttachment)
+                    textParts.Add(textPart);
+            });
+
+            foreach (var textPart in textParts)
+            {
+                var entity = await folder.GetBodyPartAsync(new UniqueId(uid), textPart, ct);
+                if (entity is not TextPart decoded)
+                    continue;
+                if (textPart.IsHtml)
+                    html ??= decoded.Text;
+                else if (textPart.IsPlain)
+                    text ??= decoded.Text;
+            }
+
+            progress?.Report(72);
+            html ??= string.IsNullOrWhiteSpace(text)
+                ? "<p></p>"
+                : "<pre style='font-family:Segoe UI;white-space:pre-wrap'>" + System.Net.WebUtility.HtmlEncode(text) + "</pre>";
+            text ??= "";
+
+            var envelope = summary.Envelope;
+            var mime = new MimeMessage();
+            if (envelope?.From is not null)
+                mime.From.AddRange(envelope.From);
+            if (envelope?.To is not null)
+                mime.To.AddRange(envelope.To);
+            mime.Subject = envelope?.Subject ?? "";
+            var builder = new BodyBuilder { HtmlBody = html, TextBody = string.IsNullOrWhiteSpace(text) ? null : text };
+            mime.Body = builder.ToMessageBody();
+
+            progress?.Report(88);
+            var view = new MessageQuickView
+            {
+                Folder = folderName,
+                Uid = uid,
+                Subject = mime.Subject ?? "",
+                From = mime.From.ToString(),
+                Html = html,
+                Text = text,
+                Mime = mime
+            };
+            view.Parts.AddRange(parts);
+            return view;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<byte[]?> GetPartBytesAsync(
+        string folderName,
+        uint uid,
+        string specifier,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(specifier))
+            return null;
+        await _readGate.WaitAsync(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(20));
+        var ct = timeout.Token;
+        try
+        {
+            var client = await EnsureReadConnectedAsync(ct);
+            var folder = await OpenAsync(client, folderName, FolderAccess.ReadOnly, ct);
+            if (folder is not ImapFolder imap)
+                return null;
+            var entity = await imap.GetBodyPartAsync(new UniqueId(uid), specifier, ct);
+            if (entity is not MimePart part)
+                return null;
+            using var buffer = new MemoryStream();
+            part.Content.DecodeTo(buffer);
+            return buffer.ToArray();
+        }
+        finally
+        {
+            _readGate.Release();
+        }
+    }
+
+    private static void WalkParts(BodyPart? part, Action<BodyPart> visit)
+    {
+        if (part is null)
+            return;
+        visit(part);
+        if (part is BodyPartMultipart multi)
+        {
+            foreach (var child in multi.BodyParts)
+                WalkParts(child, visit);
+        }
+    }
+
+    private static RemotePart? ToRemotePart(BodyPart part)
+    {
+        if (part is not BodyPartBasic basic || part is BodyPartText)
+            return null;
+        var type = basic.ContentType?.MimeType ?? "application/octet-stream";
+        var isImage = basic.ContentType?.IsMimeType("image", "*") == true;
+        var name = basic.FileName ?? (isImage ? "imagem" : "anexo");
+        var cid = (basic.ContentId ?? "").Trim().Trim('<', '>');
+        return new RemotePart
+        {
+            Specifier = basic.PartSpecifier ?? "",
+            FileName = name,
+            ContentType = type,
+            ContentId = cid,
+            Octets = basic.Octets,
+            IsImage = isImage,
+            IsInline = !basic.IsAttachment && (cid.Length > 0 ||
+                       string.Equals(basic.ContentDisposition?.Disposition, ContentDisposition.Inline, StringComparison.OrdinalIgnoreCase))
+        };
     }
 
     public async Task CleanupNewslettersAsync(string folderName, int olderThanDays, CancellationToken cancellationToken)
@@ -580,14 +758,29 @@ public sealed class ImapMailbox : IDisposable
 
     private async Task<ImapClient> EnsureConnectedAsync(CancellationToken cancellationToken)
     {
-        if (_client is { IsAuthenticated: true, IsConnected: true })
-            return _client;
+        return await EnsureClientAsync(false, cancellationToken);
+    }
 
-        _client?.Dispose();
-        _client = new ImapClient { Timeout = 90_000 };
-        await _client.ConnectAsync(_settings.ImapHost, _settings.ImapPort, SecureSocketOptions.SslOnConnect, cancellationToken);
-        await _client.AuthenticateAsync(_settings.Email, _password, cancellationToken);
-        return _client;
+    private async Task<ImapClient> EnsureReadConnectedAsync(CancellationToken cancellationToken)
+    {
+        return await EnsureClientAsync(true, cancellationToken);
+    }
+
+    private async Task<ImapClient> EnsureClientAsync(bool reader, CancellationToken cancellationToken)
+    {
+        var current = reader ? _readClient : _client;
+        if (current is { IsAuthenticated: true, IsConnected: true })
+            return current;
+
+        current?.Dispose();
+        current = new ImapClient { Timeout = reader ? 45_000 : 90_000 };
+        await current.ConnectAsync(_settings.ImapHost, _settings.ImapPort, SecureSocketOptions.SslOnConnect, cancellationToken);
+        await current.AuthenticateAsync(_settings.Email, _password, cancellationToken);
+        if (reader)
+            _readClient = current;
+        else
+            _client = current;
+        return current;
     }
 
     private static async Task<IMailFolder> GetOrCreateFolderAsync(
@@ -684,6 +877,16 @@ public sealed class ImapMailbox : IDisposable
             Cc = string.Join(";", summary.Envelope?.Cc?.Mailboxes.Select(m => m.Address) ?? []),
             Subject = summary.Envelope?.Subject ?? "",
             ContabilidadeSenders = settings.ContabilidadeSenders,
+            InovafarmaTokens = settings.InovafarmaTokens,
+            HiperTokens = settings.HiperTokens,
+            ContasTokens = settings.ContasTokens,
+            ContabilidadeTokens = settings.ContabilidadeTokens,
+            DiscordTokens = settings.DiscordTokens,
+            FolderInovafarmaEnabled = settings.FolderInovafarmaEnabled,
+            FolderHiperEnabled = settings.FolderHiperEnabled,
+            FolderContasEnabled = settings.FolderContasEnabled,
+            FolderContabilidadeEnabled = settings.FolderContabilidadeEnabled,
+            FolderDiscordEnabled = settings.FolderDiscordEnabled,
             HasContabilidadeKeyword = forceContabilidade
         };
     }
@@ -704,8 +907,8 @@ public sealed class ImapMailbox : IDisposable
             FromName = from?.Name ?? from?.Address ?? "",
             ToAddresses = string.Join("; ", summary.Envelope?.To?.Mailboxes.Select(m => m.Address) ?? []),
             Subject = summary.Envelope?.Subject ?? "",
-            Preview = summary.Envelope?.Subject ?? "",
-            DateUtc = (summary.Envelope?.Date ?? DateTimeOffset.Now).UtcDateTime,
+            Preview = "",
+            DateUtc = (summary.InternalDate ?? summary.Envelope?.Date ?? DateTimeOffset.UtcNow).UtcDateTime,
             IsSeen = summary.Flags?.HasFlag(MessageFlags.Seen) == true,
             IsFlagged = summary.Flags?.HasFlag(MessageFlags.Flagged) == true,
             HasAttachment = false,
@@ -719,6 +922,8 @@ public sealed class ImapMailbox : IDisposable
     public void Dispose()
     {
         _client?.Dispose();
+        _readClient?.Dispose();
         _gate.Dispose();
+        _readGate.Dispose();
     }
 }
