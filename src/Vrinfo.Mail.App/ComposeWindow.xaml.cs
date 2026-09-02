@@ -41,6 +41,7 @@ public partial class ComposeWindow : System.Windows.Window
     private bool _sent;
     private bool _discarded;
     private bool _allowClose;
+    private bool _closingInProgress;
     private bool _draftDirty;
     private bool _suspendDirty = true;
 
@@ -423,9 +424,7 @@ public partial class ComposeWindow : System.Windows.Window
     }
 
     private static IEnumerable<string> SplitAddresses(string? raw)
-        => (raw ?? "").Split(';', ',', '\n')
-            .Select(s => s.Trim())
-            .Where(s => s.Length > 0);
+        => (raw ?? "").Split([';', ',', '\r', '\n', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private void OnDraftDirty(object sender, RoutedEventArgs e) => MarkDraftDirty();
 
@@ -578,8 +577,20 @@ public partial class ComposeWindow : System.Windows.Window
         }
 
         e.Cancel = true;
-        await SaveDraftAsync(silent: false);
-        _allowClose = true;
-        Close();
+        if (_closingInProgress)
+            return;
+
+        _closingInProgress = true;
+        _draftTimer.Stop();
+        try
+        {
+            await SaveDraftAsync(silent: false);
+            _allowClose = true;
+            await Dispatcher.InvokeAsync(Close, DispatcherPriority.ApplicationIdle);
+        }
+        finally
+        {
+            _closingInProgress = false;
+        }
     }
 }

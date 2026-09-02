@@ -15,10 +15,12 @@
         <DockPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
             <TextBlock x:Name="DraftStatusText" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{DynamicResource Muted}"/>
-            <Button Content="Excluir rascunho" Style="{StaticResource BtnGhost}" Click="OnDiscardDraft" MinWidth="120" Margin="0,0,8,0"/>
-            <Button x:Name="SendButton" Content="Enviar" Style="{StaticResource BtnPrimary}" Click="OnSend" MinWidth="108"/>
+            <Button Content="🗑  Excluir rascunho" Style="{StaticResource BtnGhost}" Click="OnDiscardDraft" MinWidth="140" Margin="0,0,8,0"/>
+            <Button x:Name="SendButton" Content="➤  Enviar" Style="{StaticResource BtnPrimary}" Click="OnSend" MinWidth="118"/>
           </StackPanel>
-          <ListBox x:Name="AttachmentList" Height="46" BorderThickness="0"
+          <StackPanel>
+            <TextBlock Text="📎  ANEXOS DO E-MAIL" Foreground="{DynamicResource Blue}" FontWeight="Bold" FontSize="12" Margin="0,0,0,4"/>
+          <ListBox x:Name="AttachmentList" Height="46" BorderThickness="1" BorderBrush="{DynamicResource Blue}" Background="{DynamicResource InputBg}" Padding="5"
                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
                    ScrollViewer.VerticalScrollBarVisibility="Disabled">
             <ListBox.ItemsPanel>
@@ -37,6 +39,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+          </StackPanel>
         </DockPanel>
       </Border>
 
@@ -54,7 +57,8 @@
             <ColumnDefinition Width="*"/>
           </Grid.ColumnDefinitions>
           <TextBlock Text="Para" VerticalAlignment="Center"/>
-          <TextBox x:Name="ToBox" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"/>
+          <TextBox x:Name="ToBox" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"
+                   ToolTip="Vários e-mails podem ser separados por espaço, vírgula ou ponto e vírgula"/>
           <TextBlock Text="Cc" Grid.Row="1" VerticalAlignment="Center"/>
           <TextBox x:Name="CcBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,6" TextChanged="OnDraftDirty"/>
           <TextBlock Text="Cco" Grid.Row="2" VerticalAlignment="Center"/>
@@ -91,9 +95,9 @@
           <Button Content="• Lista" Click="OnBullets"/>
           <Button Content="1. Lista" Click="OnNumbers"/>
           <Separator/>
-          <Button Content="Imagem" Click="OnInsertImage"/>
-          <Button Content="Anexar" Click="OnAttach"/>
-          <Button Content="Link" Click="OnInsertLink"/>
+          <Button Content="🖼  Imagem" Click="OnInsertImage" ToolTip="Inserir imagem no corpo do e-mail"/>
+          <Button Content="📎  ANEXAR ARQUIVOS" Click="OnAttach" ToolTip="Selecionar um ou mais arquivos" FontWeight="Bold" Foreground="{DynamicResource HeaderFg}" Background="{DynamicResource Blue}" Padding="12,5"/>
+          <Button Content="🔗  Link" Click="OnInsertLink" ToolTip="Inserir link"/>
           <Separator/>
           <Button Content="Desfazer" Command="Undo"/>
           <Button Content="Refazer" Command="Redo"/>

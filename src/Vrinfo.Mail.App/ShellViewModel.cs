@@ -68,6 +68,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool isOpeningCompose;
     [ObservableProperty] private bool isOpeningMessage;
+    [ObservableProperty] private bool hasOpenAttachments;
     [ObservableProperty] private double openingProgress;
     [ObservableProperty] private bool foldersExpanded = true;
     [ObservableProperty] private bool startWithWindows = true;
@@ -481,6 +482,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         var generation = Interlocked.Increment(ref _openGeneration);
         SubjectLine = message.Subject;
         FromLine = message.DisplayFrom;
+        HasOpenAttachments = message.HasAttachment;
         HtmlBody = string.IsNullOrWhiteSpace(message.Preview)
             ? "<p style='opacity:.65'>Carregando mensagem…</p>"
             : "<p>" + System.Net.WebUtility.HtmlEncode(message.Preview) + "</p>";
@@ -544,6 +546,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
             _openMime = view.Mime;
             _openView = view;
+            HasOpenAttachments = view.Parts.Any(p => !p.IsInline || !p.IsImage) || view.Mime.Attachments.Any();
             OpeningProgress = 82;
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {

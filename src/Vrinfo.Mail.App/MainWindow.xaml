@@ -99,11 +99,11 @@
             <DataTemplate>
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="28"/>
+                  <ColumnDefinition Width="38"/>
                   <ColumnDefinition Width="*"/>
                   <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Image Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"
+                <Image Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center"
                        Source="{Binding Logo}" Stretch="Uniform"
                        RenderOptions.BitmapScalingMode="LowQuality" RenderOptions.CachingHint="Cache"/>
                 <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12.5" VerticalAlignment="Center"
@@ -230,7 +230,23 @@
                       </Style>
                     </TextBlock.Style>
                   </TextBlock>
-                  <TextBlock Text="{Binding DisplayFrom}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+                  <DockPanel Margin="0,1,0,0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                      <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                          <Setter Property="Visibility" Value="Collapsed"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasAttachment}" Value="True">
+                              <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </StackPanel.Style>
+                      <TextBlock Text="&#xE723;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource Blue}" FontSize="12"/>
+                      <TextBlock Text=" Anexo" Foreground="{DynamicResource Blue}" FontSize="11" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding DisplayFrom}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                  </DockPanel>
                   <TextBlock Text="{Binding Preview}" Foreground="{DynamicResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" Opacity="0.9">
                     <TextBlock.Style>
                       <Style TargetType="TextBlock">
@@ -271,10 +287,11 @@
             <TextBlock Text="{Binding SubjectLine}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding FromLine}" Foreground="{DynamicResource Muted}" Margin="0,4,0,8"/>
             <StackPanel Orientation="Horizontal">
-              <Button Content="Responder" Style="{StaticResource BtnPrimary}" Command="{Binding ReplyCommand}" Margin="0,0,6,0"/>
-              <Button Content="Encaminhar" Style="{StaticResource BtnGhost}" Command="{Binding ForwardCommand}" Margin="0,0,6,0"/>
-              <Button Content="Anexos" Style="{StaticResource BtnGhost}" Command="{Binding SaveAttachmentCommand}" Margin="0,0,6,0"/>
-              <Button Content="Prioridade" Style="{StaticResource BtnGhost}" Command="{Binding ToggleFlagCommand}"/>
+              <Button Content="↩  Responder" Style="{StaticResource BtnPrimary}" Command="{Binding ReplyCommand}" Margin="0,0,6,0"/>
+              <Button Content="↪  Encaminhar" Style="{StaticResource BtnGhost}" Command="{Binding ForwardCommand}" Margin="0,0,6,0"/>
+              <Button Content="📎  SALVAR ANEXOS" Style="{StaticResource BtnPrimary}" Command="{Binding SaveAttachmentCommand}" Margin="0,0,6,0" FontWeight="SemiBold"
+                      Visibility="{Binding HasOpenAttachments, Converter={StaticResource BoolToVis}}"/>
+              <Button Content="★  Prioridade" Style="{StaticResource BtnGhost}" Command="{Binding ToggleFlagCommand}"/>
             </StackPanel>
           </StackPanel>
         </Border>
