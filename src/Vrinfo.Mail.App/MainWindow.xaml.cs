@@ -90,17 +90,47 @@ public partial class MainWindow : System.Windows.Window
 
     private void OnMessageItemRightClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is ListBoxItem { DataContext: IndexedMessage message } item && DataContext is ShellViewModel vm)
+        if (sender is not ListBoxItem { DataContext: IndexedMessage message } item || DataContext is not ShellViewModel vm)
+            return;
+
+        vm.SelectMessageForContext(message);
+        item.IsSelected = true;
+        var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = item };
+        menu.Items.Add(CreateMenuItem("✓  Marcar como lido", OnMarkMessageRead));
+        menu.Items.Add(CreateMenuItem("●  Marcar como não lido", OnMarkMessageUnread));
+        menu.Items.Add(new Separator());
+        var move = new System.Windows.Controls.MenuItem { Header = "Mover sempre este remetente para…" };
+        foreach (var folder in vm.SenderRuleFolders)
         {
-            vm.SelectMessageForContext(message);
-            item.IsSelected = true;
+            var destination = CreateMenuItem(folder.Title, OnCreateSenderFolderRule);
+            destination.Tag = folder.Id;
+            move.Items.Add(destination);
         }
+        menu.Items.Add(move);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(CreateMenuItem("🗑  Excluir", OnDeleteMessage));
+        item.ContextMenu = menu;
+        menu.IsOpen = true;
+        e.Handled = true;
     }
 
     private void OnFolderItemRightClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is ListBoxItem item)
-            item.IsSelected = true;
+        if (sender is not ListBoxItem item)
+            return;
+        item.IsSelected = true;
+        var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = item };
+        menu.Items.Add(CreateMenuItem("✓  Marcar todos como lidos", OnMarkFolderRead));
+        item.ContextMenu = menu;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private static System.Windows.Controls.MenuItem CreateMenuItem(string header, RoutedEventHandler click)
+    {
+        var item = new System.Windows.Controls.MenuItem { Header = header };
+        item.Click += click;
+        return item;
     }
 
     private async void OnMarkMessageRead(object sender, RoutedEventArgs e)

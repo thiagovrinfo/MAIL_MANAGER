@@ -77,13 +77,6 @@
               <Setter Property="SnapsToDevicePixels" Value="True"/>
               <Setter Property="ToolTip" Value="{Binding Title}"/>
               <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnFolderItemRightClick"/>
-              <Setter Property="ContextMenu">
-                <Setter.Value>
-                  <ContextMenu>
-                    <MenuItem Header="✓  Marcar todos como lidos" Click="OnMarkFolderRead"/>
-                  </ContextMenu>
-                </Setter.Value>
-              </Setter>
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
@@ -186,24 +179,6 @@
               <Setter Property="Foreground" Value="{DynamicResource Text}"/>
               <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OnMessageItemMouseDown"/>
               <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnMessageItemRightClick"/>
-              <Setter Property="ContextMenu">
-                <Setter.Value>
-                  <ContextMenu>
-                    <MenuItem Header="✓  Marcar como lido" Click="OnMarkMessageRead"/>
-                    <MenuItem Header="●  Marcar como não lido" Click="OnMarkMessageUnread"/>
-                    <Separator/>
-                    <MenuItem Header="Mover sempre este remetente para…">
-                      <MenuItem Header="Inovafarma" Tag="Inovafarma" Click="OnCreateSenderFolderRule"/>
-                      <MenuItem Header="Hiper" Tag="Hiper" Click="OnCreateSenderFolderRule"/>
-                      <MenuItem Header="Contas" Tag="Contas" Click="OnCreateSenderFolderRule"/>
-                      <MenuItem Header="Contabilidade" Tag="Contabilidade" Click="OnCreateSenderFolderRule"/>
-                      <MenuItem Header="Discord" Tag="Discord" Click="OnCreateSenderFolderRule"/>
-                    </MenuItem>
-                    <Separator/>
-                    <MenuItem Header="🗑  Excluir" Click="OnDeleteMessage"/>
-                  </ContextMenu>
-                </Setter.Value>
-              </Setter>
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
