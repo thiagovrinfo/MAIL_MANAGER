@@ -9,3 +9,4 @@ obj/
 TestResults/
 publish/
 VRINFO.Mail/
+.build-check*/

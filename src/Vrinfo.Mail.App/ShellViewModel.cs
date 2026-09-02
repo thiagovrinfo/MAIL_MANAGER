@@ -462,10 +462,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _cacheOrder.Enqueue(key);
     }
 
-    private void RemoveFromCache(string key)
+    private async Task PersistSeenAsync(IndexedMessage message)
     {
-        if (_newBodyCache.TryRemove(key, out var view))
-            Interlocked.Add(ref _cacheBytes, -view.ByteSize);
+        try
+        {
+            await _mailbox.SetSeenAsync(message.Folder, message.Uid, true, _cts.Token);
+        }
+        catch (Exception ex)
+        {
+            Status = "Não foi possível marcar como lido: " + ex.Message;
+        }
     }
 
     private async Task OpenMessageAsync(IndexedMessage? message)
@@ -473,31 +479,27 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (message is null)
             return;
         var generation = Interlocked.Increment(ref _openGeneration);
+        SubjectLine = message.Subject;
+        FromLine = message.DisplayFrom;
+        HtmlBody = string.IsNullOrWhiteSpace(message.Preview)
+            ? "<p style='opacity:.65'>Carregando mensagem…</p>"
+            : "<p>" + System.Net.WebUtility.HtmlEncode(message.Preview) + "</p>";
+        HtmlChanged?.Invoke(HtmlBody);
+        IsOpeningMessage = true;
+        OpeningProgress = 10;
 
-        if (!message.IsSeen)
+        if (!message.IsSeen && !IsDraftsFolder(message.Folder))
         {
-            try
-            {
-                await _mailbox.SetSeenAsync(message.Folder, message.Uid, true, _cts.Token);
-                message.IsSeen = true;
-                _index.Upsert(message);
-                RefreshUnread();
-                if (UnreadOnly)
-                    ReloadList();
-            }
-            catch (Exception readEx)
-            {
-                Status = "Não foi possível marcar como lido: " + readEx.Message;
-            }
+            message.IsSeen = true;
+            _index.Upsert(message);
+            RefreshUnread();
+            if (UnreadOnly)
+                ReloadList();
+            _ = PersistSeenAsync(message);
         }
 
         try
         {
-            SubjectLine = message.Subject;
-            FromLine = message.DisplayFrom;
-            IsOpeningMessage = true;
-            OpeningProgress = 10;
-
             MessageQuickView view;
             var cacheKey = BodyCacheKey(message.Folder, message.Uid);
             if (IsDraftsFolder(message.Folder))
@@ -534,6 +536,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                         OpeningProgress = value;
                 });
                 view = await _mailbox.GetQuickViewAsync(message.Folder, message.Uid, progress, _cts.Token);
+                TryAddCache(cacheKey, view);
             }
 
             if (generation != _openGeneration)
@@ -549,7 +552,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 HtmlBody = view.Html;
                 HtmlChanged?.Invoke(HtmlBody);
             });
-            RemoveFromCache(cacheKey);
             IsOpeningMessage = false;
 
             if (IsDraftsFolder(message.Folder))
