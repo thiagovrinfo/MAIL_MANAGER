@@ -82,6 +82,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public GridLength FolderColumnWidth => FoldersExpanded ? new GridLength(176) : new GridLength(52);
     public string FolderToggleGlyph => FoldersExpanded ? "‹" : "›";
     public string FolderToggleHint => FoldersExpanded ? "Reduzir pastas" : "Expandir pastas";
+    public IEnumerable<FolderNavItem> SenderRuleFolders => Folders.Where(f => RuleDestinationFolders.Contains(f.Id, StringComparer.OrdinalIgnoreCase));
 
     public event Action<string, string>? ToastRequested;
     public event Action<string>? HtmlChanged;
@@ -272,6 +273,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             SelectedMessage = message;
         else
             _ = OpenMessageAsync(message);
+    }
+
+    public void SelectMessageForContext(IndexedMessage message)
+    {
+        _suppressMessageOpen = true;
+        try
+        {
+            SelectedMessage = message;
+        }
+        finally
+        {
+            _suppressMessageOpen = false;
+        }
     }
 
     private async Task SyncKnownFoldersAsync()
@@ -655,6 +669,40 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    public async Task SetSelectedSeenAsync(bool seen)
+    {
+        if (SelectedMessage is null)
+            return;
+        var message = SelectedMessage;
+        await _mailbox.SetSeenAsync(message.Folder, message.Uid, seen, _cts.Token);
+        message.IsSeen = seen;
+        _index.Upsert(message);
+        RefreshUnread();
+        if (UnreadOnly && seen)
+            ReloadList();
+    }
+
+    public async Task DeleteSelectedFromContextAsync() => await DeleteSelected();
+
+    public async Task MarkSelectedFolderReadAsync() => await MarkFolderRead();
+
+    public async Task AddSenderFolderRuleAsync(FolderNavItem destination)
+    {
+        if (SelectedMessage is null || string.IsNullOrWhiteSpace(SelectedMessage.FromAddress))
+            return;
+        var message = SelectedMessage;
+        _settings.SenderFolderRules[message.FromAddress.Trim()] = destination.Id;
+        _store.Save(_settings);
+        if (!string.Equals(message.Folder, destination.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            await _mailbox.MoveAsync(message.Folder, message.Uid, destination.Id, _cts.Token);
+            _index.DeleteByUniqueId(message.UniqueId);
+            ReloadList();
+            await SyncKnownFoldersAsync();
+        }
+        Status = $"Regra criada: {message.FromAddress} → {destination.Title}.";
     }
 
     [RelayCommand]

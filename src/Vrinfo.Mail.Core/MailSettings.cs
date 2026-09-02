@@ -23,6 +23,7 @@ public sealed class MailSettings
     public bool FolderDiscordEnabled { get; set; } = true;
     public List<string> AlwaysCc { get; set; } = [MailConstants.AlwaysCc];
     public List<string> ContabilidadeSenders { get; set; } = [];
+    public Dictionary<string, string> SenderFolderRules { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> InovafarmaTokens { get; set; } = [];
     public List<string> HiperTokens { get; set; } = [];
     public List<string> ContasTokens { get; set; } = [];

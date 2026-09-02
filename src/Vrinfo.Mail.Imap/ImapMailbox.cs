@@ -696,8 +696,7 @@ public sealed class ImapMailbox : IDisposable
 
                 foreach (var summary in summaries)
                 {
-                    var destName = FolderRuleEngine.FolderName(
-                        FolderRuleEngine.ResolveFolder(ToInput(summary, _settings, false)));
+                    var destName = FolderRuleEngine.ResolveDestination(ToInput(summary, _settings, false));
                     if (destName is null)
                         continue;
 
@@ -877,6 +876,7 @@ public sealed class ImapMailbox : IDisposable
             Cc = string.Join(";", summary.Envelope?.Cc?.Mailboxes.Select(m => m.Address) ?? []),
             Subject = summary.Envelope?.Subject ?? "",
             ContabilidadeSenders = settings.ContabilidadeSenders,
+            SenderFolderRules = settings.SenderFolderRules,
             InovafarmaTokens = settings.InovafarmaTokens,
             HiperTokens = settings.HiperTokens,
             ContasTokens = settings.ContasTokens,

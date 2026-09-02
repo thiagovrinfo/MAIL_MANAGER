@@ -7,6 +7,7 @@ public sealed class RuleMatchInput
     public string Cc { get; init; } = string.Empty;
     public string Subject { get; init; } = string.Empty;
     public IReadOnlyList<string> ContabilidadeSenders { get; init; } = [];
+    public IReadOnlyDictionary<string, string> SenderFolderRules { get; init; } = new Dictionary<string, string>();
     public IReadOnlyList<string> InovafarmaTokens { get; init; } = [];
     public IReadOnlyList<string> HiperTokens { get; init; } = [];
     public IReadOnlyList<string> ContasTokens { get; init; } = [];

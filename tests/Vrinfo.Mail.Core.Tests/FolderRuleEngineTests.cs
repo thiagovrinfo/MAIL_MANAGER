@@ -106,6 +106,21 @@ public sealed class FolderRuleEngineTests
     }
 
     [Fact]
+    public void Sender_rule_uses_exact_address_and_overrides_smart_rules()
+    {
+        var destination = FolderRuleEngine.ResolveDestination(new RuleMatchInput
+        {
+            From = "ABC@adm.com.br",
+            Subject = "Discord notification",
+            SenderFolderRules = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["abc@adm.com.br"] = MailConstants.FolderContabilidade
+            }
+        });
+        Assert.Equal(MailConstants.FolderContabilidade, destination);
+    }
+
+    [Fact]
     public void Disabled_folder_skips_rule()
     {
         var kind = FolderRuleEngine.ResolveFolder(new RuleMatchInput

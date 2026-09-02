@@ -2,6 +2,23 @@ namespace Vrinfo.Mail.Core;
 
 public static class FolderRuleEngine
 {
+    public static string? ResolveDestination(RuleMatchInput input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var sender = input.From.Trim();
+        if (sender.Length > 0)
+        {
+            foreach (var rule in input.SenderFolderRules)
+            {
+                if (string.Equals(rule.Key.Trim(), sender, StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(rule.Value))
+                    return rule.Value.Trim();
+            }
+        }
+
+        return FolderName(ResolveFolder(input));
+    }
+
     public static SmartFolderKind ResolveFolder(RuleMatchInput input)
     {
         ArgumentNullException.ThrowIfNull(input);

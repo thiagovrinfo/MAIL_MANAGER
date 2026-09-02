@@ -88,6 +88,51 @@ public partial class MainWindow : System.Windows.Window
         }
     }
 
+    private void OnMessageItemRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBoxItem { DataContext: IndexedMessage message } item && DataContext is ShellViewModel vm)
+        {
+            vm.SelectMessageForContext(message);
+            item.IsSelected = true;
+        }
+    }
+
+    private void OnFolderItemRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBoxItem item)
+            item.IsSelected = true;
+    }
+
+    private async void OnMarkMessageRead(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm)
+            await vm.SetSelectedSeenAsync(true);
+    }
+
+    private async void OnMarkMessageUnread(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm)
+            await vm.SetSelectedSeenAsync(false);
+    }
+
+    private async void OnDeleteMessage(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm)
+            await vm.DeleteSelectedFromContextAsync();
+    }
+
+    private async void OnMarkFolderRead(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm)
+            await vm.MarkSelectedFolderReadAsync();
+    }
+
+    private async void OnCreateSenderFolderRule(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.MenuItem { DataContext: FolderNavItem destination } && DataContext is ShellViewModel vm)
+            await vm.AddSenderFolderRuleAsync(destination);
+    }
+
     private void ShowHtml(string? html)
     {
         _pendingHtml = html;

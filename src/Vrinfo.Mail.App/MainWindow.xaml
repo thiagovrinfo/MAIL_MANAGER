@@ -76,6 +76,14 @@
               <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
               <Setter Property="SnapsToDevicePixels" Value="True"/>
               <Setter Property="ToolTip" Value="{Binding Title}"/>
+              <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnFolderItemRightClick"/>
+              <Setter Property="ContextMenu">
+                <Setter.Value>
+                  <ContextMenu>
+                    <MenuItem Header="✓  Marcar todos como lidos" Click="OnMarkFolderRead"/>
+                  </ContextMenu>
+                </Setter.Value>
+              </Setter>
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
@@ -176,7 +184,29 @@
               <Setter Property="Cursor" Value="Hand"/>
               <Setter Property="Focusable" Value="True"/>
               <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+              <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
               <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OnMessageItemMouseDown"/>
+              <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnMessageItemRightClick"/>
+              <Setter Property="ContextMenu">
+                <Setter.Value>
+                  <ContextMenu>
+                    <MenuItem Header="✓  Marcar como lido" Click="OnMarkMessageRead"/>
+                    <MenuItem Header="●  Marcar como não lido" Click="OnMarkMessageUnread"/>
+                    <Separator/>
+                    <MenuItem Header="Mover sempre este remetente para…"
+                              ItemsSource="{Binding PlacementTarget.Tag.SenderRuleFolders, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                      <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                          <Setter Property="Header" Value="{Binding Title}"/>
+                          <EventSetter Event="Click" Handler="OnCreateSenderFolderRule"/>
+                        </Style>
+                      </MenuItem.ItemContainerStyle>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="🗑  Excluir" Click="OnDeleteMessage"/>
+                  </ContextMenu>
+                </Setter.Value>
+              </Setter>
               <Setter Property="Template">
                 <Setter.Value>
                   <ControlTemplate TargetType="ListBoxItem">
