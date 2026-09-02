@@ -65,6 +65,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string htmlBody = "<p></p>";
     [ObservableProperty] private string subjectLine = "";
     [ObservableProperty] private string fromLine = "";
+    [ObservableProperty] private string receivedLine = "";
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool isOpeningCompose;
     [ObservableProperty] private bool isOpeningMessage;
@@ -496,6 +497,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         var generation = Interlocked.Increment(ref _openGeneration);
         SubjectLine = message.Subject;
         FromLine = message.DisplayFrom;
+        ReceivedLine = "Recebido em " + message.DateUtc.ToLocalTime().ToString("dd/MM/yyyy 'às' HH:mm");
         HasOpenAttachments = message.HasAttachment;
         HtmlBody = string.IsNullOrWhiteSpace(message.Preview)
             ? "<p style='opacity:.65'>Carregando mensagem…</p>"

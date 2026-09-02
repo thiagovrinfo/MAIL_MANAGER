@@ -39,18 +39,7 @@ public sealed class IndexedMessage : INotifyPropertyChanged
 
     public string DisplayFrom => string.IsNullOrWhiteSpace(FromName) ? FromAddress : FromName;
     public string WhenLabel => DateUtc.ToLocalTime().ToString("dd/MM HH:mm");
-    public string WhenShort
-    {
-        get
-        {
-            var local = DateUtc.ToLocalTime();
-            if (local.Date == DateTime.Today)
-                return local.ToString("HH:mm");
-            if (local.Year == DateTime.Now.Year)
-                return local.ToString("dd/MM");
-            return local.ToString("dd/MM/yy");
-        }
-    }
+    public string WhenShort => DateUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
     public bool ShowPreview
     {
         get
