@@ -129,7 +129,11 @@ public partial class MainWindow : System.Windows.Window
 
     private async void OnCreateSenderFolderRule(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.MenuItem { DataContext: FolderNavItem destination } && DataContext is ShellViewModel vm)
+        if (sender is not System.Windows.Controls.MenuItem { Tag: string destinationId } || DataContext is not ShellViewModel vm)
+            return;
+        var destination = vm.SenderRuleFolders.FirstOrDefault(folder =>
+            string.Equals(folder.Id, destinationId, StringComparison.OrdinalIgnoreCase));
+        if (destination is not null)
             await vm.AddSenderFolderRuleAsync(destination);
     }
 
