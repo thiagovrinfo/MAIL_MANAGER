@@ -473,6 +473,24 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (message is null)
             return;
         var generation = Interlocked.Increment(ref _openGeneration);
+
+        if (!message.IsSeen)
+        {
+            try
+            {
+                await _mailbox.SetSeenAsync(message.Folder, message.Uid, true, _cts.Token);
+                message.IsSeen = true;
+                _index.Upsert(message);
+                RefreshUnread();
+                if (UnreadOnly)
+                    ReloadList();
+            }
+            catch (Exception readEx)
+            {
+                Status = "Não foi possível marcar como lido: " + readEx.Message;
+            }
+        }
+
         try
         {
             SubjectLine = message.Subject;
@@ -543,16 +561,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                     OpenCompose(_openMime, false, message.Uid, loadAsDraft: true);
                 }
                 return;
-            }
-
-            if (!message.IsSeen)
-            {
-                await _mailbox.SetSeenAsync(message.Folder, message.Uid, true, _cts.Token);
-                message.IsSeen = true;
-                _index.Upsert(message);
-                RefreshUnread();
-                if (UnreadOnly)
-                    ReloadList();
             }
 
             OpeningProgress = 90;
